@@ -1,0 +1,1261 @@
+<div
+  [class.light]="!store.isDarkMode()"
+  class="w-screen h-screen flex flex-col select-none overflow-hidden"
+  style="background-color: var(--bg-canvas); color: #f8fafc"
+>
+  <!-- ====================================================================== -->
+  <!-- TOP STUDIO HEADER BAR                                                  -->
+  <!-- ====================================================================== -->
+  <header
+    class="h-13 shrink-0 px-3.5 py-2 border-b flex items-center justify-between gap-3 z-30"
+    style="background-color: var(--bg-panel); border-color: var(--border-subtle)"
+  >
+    <!-- Brand & Project Title -->
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
+        <div
+          class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-600/25 font-mono font-bold text-white text-sm"
+        >
+          pg
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span
+              class="font-bold tracking-tight text-sm"
+              [class.text-slate-900]="!store.isDarkMode()"
+              [class.text-white]="store.isDarkMode()"
+              >pgLite Studio</span
+            >
+            <span
+              class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30 font-semibold"
+              >PRO ER</span
+            >
+          </div>
+          <p class="text-[11px] text-slate-400 leading-none">
+            PostgreSQL · .NET 8 EF Core · Angular Signals
+          </p>
+        </div>
+      </div>
+
+      <div class="h-6 w-px bg-slate-700/50 mx-1"></div>
+
+      <!-- Editable Project Name -->
+      <div class="flex items-center gap-1.5">
+        <input
+          type="text"
+          [ngModel]="store.project().name"
+          (ngModelChange)="store.updateProjectConfig({ name: $event })"
+          class="px-2.5 py-1 rounded-md text-xs font-medium border bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 transition w-48"
+          [class.text-slate-800]="!store.isDarkMode()"
+          [class.text-slate-100]="store.isDarkMode()"
+          style="border-color: var(--border-strong)"
+          title="Nombre del proyecto"
+        />
+      </div>
+
+      <!-- Preset Domain Templates -->
+      <div class="hidden xl:flex items-center gap-1 text-xs">
+        <span class="text-slate-400 mr-1">Plantillas:</span>
+        <button
+          (click)="store.loadTemplate('saas'); resetViewport(); showToast('Plantilla SaaS Multi-Tenant cargada')"
+          class="px-2 py-1 rounded text-xs font-medium bg-slate-800/70 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+        >
+          SaaS
+        </button>
+        <button
+          (click)="store.loadTemplate('ecommerce'); resetViewport(); showToast('Plantilla E-Commerce cargada')"
+          class="px-2 py-1 rounded text-xs font-medium bg-slate-800/70 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+        >
+          E-Commerce
+        </button>
+        <button
+          (click)="store.loadTemplate('clinic'); resetViewport(); showToast('Plantilla Clínica HIS cargada')"
+          class="px-2 py-1 rounded text-xs font-medium bg-slate-800/70 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+        >
+          Clínica HIS
+        </button>
+      </div>
+    </div>
+
+    <!-- Center Modeling Actions -->
+    <div class="flex items-center gap-1.5">
+      <!-- Undo / Redo -->
+      <div class="flex items-center rounded-md border overflow-hidden" style="border-color: var(--border-strong)">
+        <button
+          (click)="store.undo()"
+          [disabled]="!store.canUndo()"
+          class="px-2 py-1.5 text-xs hover:bg-slate-700/40 disabled:opacity-35 transition"
+          [class.text-slate-700]="!store.isDarkMode()"
+          [class.text-slate-200]="store.isDarkMode()"
+          title="Deshacer (Undo)"
+        >
+          ↶
+        </button>
+        <button
+          (click)="store.redo()"
+          [disabled]="!store.canRedo()"
+          class="px-2 py-1.5 text-xs border-l hover:bg-slate-700/40 disabled:opacity-35 transition"
+          [class.text-slate-700]="!store.isDarkMode()"
+          [class.text-slate-200]="store.isDarkMode()"
+          style="border-color: var(--border-strong)"
+          title="Rehacer (Redo)"
+        >
+          ↷
+        </button>
+      </div>
+
+      <button
+        (click)="store.addTable()"
+        class="px-2.5 py-1.5 rounded-md text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition flex items-center gap-1.5"
+      >
+        <span class="font-bold">+</span> Nueva Tabla
+      </button>
+
+      <button
+        (click)="openFkModal()"
+        class="px-2.5 py-1.5 rounded-md text-xs font-medium border hover:bg-slate-700/30 transition flex items-center gap-1.5"
+        [class.text-slate-700]="!store.isDarkMode()"
+        [class.text-slate-200]="store.isDarkMode()"
+        style="border-color: var(--border-strong)"
+      >
+        <span class="text-sky-400">🔗</span> + Relación FK
+      </button>
+
+      <button
+        (click)="store.autoLayoutDiagram(); resetViewport(); showToast('Auto-Layout topológico aplicado')"
+        class="px-2.5 py-1.5 rounded-md text-xs font-medium border hover:bg-slate-700/30 transition flex items-center gap-1.5"
+        [class.text-slate-700]="!store.isDarkMode()"
+        [class.text-slate-200]="store.isDarkMode()"
+        style="border-color: var(--border-strong)"
+        title="Ordenar tablas automáticamente por jerarquía de dependencias"
+      >
+        <span>✨</span> Auto-Layout
+      </button>
+
+      <button
+        (click)="showImportSqlModal.set(true)"
+        class="px-2.5 py-1.5 rounded-md text-xs font-medium border hover:bg-slate-700/30 transition flex items-center gap-1.5"
+        [class.text-slate-700]="!store.isDarkMode()"
+        [class.text-slate-200]="store.isDarkMode()"
+        style="border-color: var(--border-strong)"
+        title="Ingeniería inversa: Pegar SQL DDL para generar el diagrama"
+      >
+        <span>📥</span> Importar SQL
+      </button>
+    </div>
+
+    <!-- Right Code Generation & Full-Stack Export Actions -->
+    <div class="flex items-center gap-2">
+      <!-- Quick Code Switchers -->
+      <div
+        class="flex items-center rounded-md border overflow-hidden text-xs"
+        style="border-color: var(--border-strong)"
+      >
+        <button
+          (click)="openCodeGenerator('sql')"
+          class="px-2.5 py-1.5 font-medium transition flex items-center gap-1"
+          [ngClass]="
+            rightTab() === 'code' && activeCodeLang() === 'sql'
+              ? 'bg-blue-600 text-white'
+              : store.isDarkMode()
+              ? 'text-slate-300 hover:bg-slate-800'
+              : 'text-slate-700 hover:bg-slate-100'
+          "
+        >
+          <span>🐘</span> SQL
+        </button>
+        <button
+          (click)="openCodeGenerator('csharp')"
+          class="px-2.5 py-1.5 font-medium border-l transition flex items-center gap-1"
+          style="border-color: var(--border-strong)"
+          [ngClass]="
+            rightTab() === 'code' && activeCodeLang() === 'csharp'
+              ? 'bg-purple-600 text-white'
+              : store.isDarkMode()
+              ? 'text-slate-300 hover:bg-slate-800'
+              : 'text-slate-700 hover:bg-slate-100'
+          "
+        >
+          <span>#</span> C# Entities
+        </button>
+        <button
+          (click)="openCodeGenerator('angular')"
+          class="px-2.5 py-1.5 font-medium border-l transition flex items-center gap-1"
+          style="border-color: var(--border-strong)"
+          [ngClass]="
+            rightTab() === 'code' && activeCodeLang() === 'angular'
+              ? 'bg-rose-600 text-white'
+              : store.isDarkMode()
+              ? 'text-slate-300 hover:bg-slate-800'
+              : 'text-slate-700 hover:bg-slate-100'
+          "
+        >
+          <span>🅰️</span> Angular TS
+        </button>
+      </div>
+
+      <!-- Download Full-Stack ZIP -->
+      <button
+        (click)="downloadFullStackZip()"
+        class="px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition flex items-center gap-1.5"
+        title="Descargar paquete .ZIP con SQL + Clases C# + Interfaces Angular TS"
+      >
+        <span>📦</span> Exportar .ZIP
+      </button>
+
+      <!-- Save / Load JSON -->
+      <button
+        (click)="exportProjectJson()"
+        class="p-1.5 rounded-md border text-xs hover:bg-slate-700/30 transition"
+        [class.text-slate-700]="!store.isDarkMode()"
+        [class.text-slate-300]="store.isDarkMode()"
+        style="border-color: var(--border-strong)"
+        title="Guardar proyecto (.pglite.json)"
+      >
+        💾
+      </button>
+      <label
+        class="p-1.5 rounded-md border text-xs hover:bg-slate-700/30 transition cursor-pointer"
+        [class.text-slate-700]="!store.isDarkMode()"
+        [class.text-slate-300]="store.isDarkMode()"
+        style="border-color: var(--border-strong)"
+        title="Abrir archivo de proyecto (.pglite.json)"
+      >
+        📂
+        <input type="file" accept=".json" (change)="onImportProjectFile($event)" class="hidden" />
+      </label>
+
+      <!-- Theme Toggle -->
+      <button
+        (click)="toggleTheme()"
+        class="p-1.5 rounded-md border text-xs hover:bg-slate-700/30 transition"
+        [class.text-slate-700]="!store.isDarkMode()"
+        [class.text-slate-300]="store.isDarkMode()"
+        style="border-color: var(--border-strong)"
+        title="Cambiar tema Oscuro / Claro"
+      >
+        {{ store.isDarkMode() ? '☀️' : '🌙' }}
+      </button>
+    </div>
+  </header>
+
+  <!-- ====================================================================== -->
+  <!-- MAIN 3-COLUMN WORKSPACE                                                -->
+  <!-- ====================================================================== -->
+  <div class="flex-1 flex overflow-hidden relative">
+    <!-- ==================================================================== -->
+    <!-- 1. LEFT SIDEBAR: OBJECT EXPLORER (pgModeler Style)                   -->
+    <!-- ==================================================================== -->
+    <aside
+      class="w-60 shrink-0 border-r flex flex-col justify-between z-20"
+      style="background-color: var(--bg-panel); border-color: var(--border-subtle)"
+    >
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Explorer Header & Filter -->
+        <div class="p-3 border-b space-y-2" style="border-color: var(--border-subtle)">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              Explorador de Esquema
+            </span>
+            <span class="text-[11px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
+              {{ store.tables().length }} tablas
+            </span>
+          </div>
+          <input
+            type="text"
+            [ngModel]="store.searchQuery()"
+            (ngModelChange)="store.searchQuery.set($event)"
+            placeholder="Filtrar tabla o columna..."
+            class="w-full px-2.5 py-1.5 rounded-md text-xs border bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
+            [class.text-slate-800]="!store.isDarkMode()"
+            [class.text-slate-100]="store.isDarkMode()"
+            style="border-color: var(--border-strong)"
+          />
+        </div>
+
+        <!-- Tables Tree List -->
+        <div class="flex-1 overflow-y-auto p-2 space-y-1">
+          @for (tbl of store.filteredTables(); track tbl.id) {
+            <div
+              (click)="selectTable(tbl.id, true); rightTab.set('inspector')"
+              class="group px-2.5 py-2 rounded-md cursor-pointer transition flex items-center justify-between text-xs border"
+              [ngClass]="
+                store.selectedTableId() === tbl.id
+                  ? 'bg-blue-600/15 border-blue-500/50'
+                  : 'border-transparent hover:bg-slate-800/40'
+              "
+            >
+              <div class="flex items-center gap-2 min-w-0">
+                <span
+                  class="w-2.5 h-2.5 rounded-sm shrink-0"
+                  [style.backgroundColor]="tbl.color"
+                ></span>
+                <div class="truncate">
+                  <div
+                    class="font-mono font-medium truncate"
+                    [class.text-slate-800]="!store.isDarkMode()"
+                    [class.text-slate-100]="store.isDarkMode()"
+                  >
+                    <span class="text-slate-400 font-normal">{{ tbl.schema }}.</span>{{ tbl.name }}
+                  </div>
+                  <div class="text-[10px] text-slate-400">
+                    {{ tbl.columns.length }} cols ·
+                    {{ countTableFks(tbl) }} FK
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                <button
+                  (click)="$event.stopPropagation(); store.duplicateTable(tbl.id); showToast('Tabla duplicada')"
+                  class="p-1 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white"
+                  title="Duplicar tabla"
+                >
+                  ⧉
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Bottom Schema Metrics & Interactive Tip -->
+      <div class="p-3 border-t space-y-2 text-xs" style="border-color: var(--border-subtle)">
+        <div
+          class="p-2.5 rounded-lg border space-y-1"
+          style="background-color: var(--bg-surface); border-color: var(--border-strong)"
+        >
+          <div class="flex items-center gap-1.5 font-semibold text-sky-400">
+            <span>💡</span> Conector Rápido PK → FK
+          </div>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            Arrastra el punto conector <b class="text-amber-400">●</b> de cualquier llave primaria
+            <b class="text-amber-400">PK</b> y suéltalo sobre otra tabla para crear la llave foránea al instante.
+          </p>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] text-slate-400 font-mono pt-1">
+          <span>{{ store.totalColumnsCount() }} columnas</span>
+          <span>·</span>
+          <span>{{ store.totalRelationsCount() }} relaciones</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ==================================================================== -->
+    <!-- 2. CENTER INFINITE ER CANVAS (Pan, Zoom, Nodes & SVG Crow's Foot)    -->
+    <!-- ==================================================================== -->
+    <main
+      #canvasViewport
+      (wheel)="onCanvasWheel($event)"
+      (mousedown)="onCanvasMouseDown($event)"
+      class="flex-1 h-full relative overflow-hidden"
+      [class.cursor-grabbing]="isPanning()"
+      [class.cursor-grab]="!isPanning()"
+      style="
+        background-image: radial-gradient(var(--dot-color) 1.25px, transparent 1.25px);
+        background-size: 22px 22px;
+      "
+    >
+      <!-- World Container with Pan + Scale Transform -->
+      <div
+        class="absolute top-0 left-0 origin-top-left"
+        style="width: 4000px; height: 3000px"
+        [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px) scale(' + zoom() + ')'"
+      >
+        <!-- SVG Layer for pgModeler Crow's Foot Connectors -->
+        <svg
+          class="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          @for (rel of relationshipPaths(); track rel.id) {
+            <g>
+              <!-- Glow shadow on active relationship -->
+              @if (rel.isHighlighted) {
+                <path
+                  [attr.d]="rel.pathD"
+                  fill="none"
+                  [attr.stroke]="rel.color"
+                  stroke-width="6"
+                  stroke-opacity="0.18"
+                />
+              }
+
+              <!-- Main Bezier Curve -->
+              <path
+                [attr.d]="rel.pathD"
+                fill="none"
+                [attr.stroke]="rel.color"
+                [attr.stroke-width]="rel.isHighlighted ? '2.4' : '1.8'"
+                stroke-dasharray="6,3"
+                [class.fk-line-animated]="rel.isHighlighted"
+              />
+
+              <!-- Crow's Foot Fork (Many / FK Child side) -->
+              <path
+                [attr.d]="rel.crowD"
+                fill="none"
+                [attr.stroke]="rel.color"
+                stroke-width="2.2"
+                stroke-linecap="round"
+              />
+
+              <!-- Single Bar (One / PK Parent side) -->
+              <line
+                [attr.x1]="rel.barX"
+                [attr.y1]="rel.barY1"
+                [attr.x2]="rel.barX"
+                [attr.y2]="rel.barY2"
+                [attr.stroke]="rel.color"
+                stroke-width="2.4"
+                stroke-linecap="round"
+              />
+
+              <!-- Pill Badge at Midpoint when Selected -->
+              @if (rel.isHighlighted) {
+                <text
+                  [attr.x]="rel.midX"
+                  [attr.y]="rel.midY"
+                  text-anchor="middle"
+                  fill="#94a3b8"
+                  font-size="10"
+                  font-family="JetBrains Mono, monospace"
+                >
+                  {{ rel.label }}
+                </text>
+              }
+            </g>
+          }
+
+          <!-- Active Dragging Cable Preview (PK -> Target Table) -->
+          @if (draggingCable(); as cable) {
+            <g>
+              <line
+                [attr.x1]="cable.startX"
+                [attr.y1]="cable.startY"
+                [attr.x2]="cable.currX"
+                [attr.y2]="cable.currY"
+                stroke="#f59e0b"
+                stroke-width="2.5"
+                stroke-dasharray="5,3"
+              />
+              <circle
+                [attr.cx]="cable.currX"
+                [attr.cy]="cable.currY"
+                r="5"
+                fill="#f59e0b"
+              />
+            </g>
+          }
+        </svg>
+
+        <!-- HTML Table Nodes Layer -->
+        @for (table of store.tables(); track table.id) {
+          <div
+            (mousedown)="onTableMouseDown($event, table)"
+            (mouseup)="onDropCableOnTable($event, table)"
+            [style.left.px]="table.x"
+            [style.top.px]="table.y"
+            class="absolute w-[272px] rounded-lg border shadow-xl transition-shadow"
+            style="background-color: var(--bg-panel)"
+            [ngClass]="
+              store.selectedTableId() === table.id
+                ? 'ring-2 ring-blue-500 border-blue-500 z-20 shadow-blue-500/15'
+                : 'z-10 hover:border-slate-500'
+            "
+            [style.borderColor]="
+              store.selectedTableId() === table.id ? '#3b82f6' : 'var(--border-strong)'
+            "
+          >
+            <!-- Table Header (pgModeler classic colored banner) -->
+            <div
+              [style.backgroundColor]="table.color"
+              class="h-[38px] px-3 rounded-t-lg text-white flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing"
+            >
+              <div class="flex items-center gap-1.5 truncate font-mono text-xs font-bold">
+                <span class="opacity-75 font-normal">{{ table.schema }}.</span>
+                <span class="truncate">{{ table.name }}</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <span
+                  class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/25 text-white/90"
+                >
+                  {{ table.columns.length }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Columns List -->
+            <div class="divide-y text-xs" style="border-color: var(--border-subtle)">
+              @for (col of table.columns; track col.id; let colIdx = $index) {
+                <div
+                  class="h-[29px] px-2.5 flex items-center justify-between gap-2 relative group hover:bg-slate-500/10 transition"
+                >
+                  <!-- Left Column Icon + Name -->
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    @if (col.pk) {
+                      <span
+                        class="text-amber-400 font-bold text-xs shrink-0"
+                        title="Primary Key"
+                        >🔑</span
+                      >
+                    } @else if (col.fk) {
+                      <span
+                        class="text-sky-400 font-bold text-xs shrink-0"
+                        title="Foreign Key"
+                        >🔗</span
+                      >
+                    } @else {
+                      <span class="w-3.5 text-center text-slate-500 shrink-0">•</span>
+                    }
+
+                    <span
+                      class="font-mono truncate text-[12px]"
+                      [class.font-semibold]="col.pk"
+                      [class.underline]="col.pk"
+                      [class.decoration-amber-400]="col.pk"
+                      [class.text-slate-800]="!store.isDarkMode()"
+                      [class.text-slate-100]="store.isDarkMode()"
+                    >
+                      {{ col.name }}
+                    </span>
+                  </div>
+
+                  <!-- Right Data Type + Constraints Badges -->
+                  <div class="flex items-center gap-1.5 shrink-0 font-mono">
+                    <span class="text-[11px] text-slate-400">{{ col.type }}</span>
+                    @if (col.nn || col.pk) {
+                      <span
+                        class="text-[10px] font-bold px-1 rounded bg-rose-500/15 text-rose-400"
+                        title="NOT NULL"
+                        >NN</span
+                      >
+                    }
+                    @if (col.unique && !col.pk) {
+                      <span
+                        class="text-[10px] font-bold px-1 rounded bg-emerald-500/15 text-emerald-400"
+                        title="UNIQUE"
+                        >UQ</span
+                      >
+                    }
+                  </div>
+
+                  <!-- Interactive PK Connector Port on Right Edge -->
+                  @if (col.pk) {
+                    <div
+                      (mousedown)="onStartCableDrag($event, table, col, colIdx)"
+                      class="w-3.5 h-3.5 rounded-full bg-amber-400 border-2 border-slate-900 absolute -right-2 top-1/2 -translate-y-1/2 cursor-crosshair hover:scale-125 transition shadow"
+                      title="Arrastra hacia otra tabla para vincular con una Foreign Key"
+                    ></div>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Card Footer Quick Action -->
+            <div
+              class="px-2.5 py-1 rounded-b-lg border-t flex items-center justify-between text-[11px] text-slate-400"
+              style="background-color: var(--bg-surface); border-color: var(--border-subtle)"
+            >
+              <button
+                (mousedown)="$event.stopPropagation()"
+                (click)="store.addColumn(table.id); store.selectedTableId.set(table.id); rightTab.set('inspector')"
+                class="hover:text-blue-400 font-medium transition"
+              >
+                + Añadir columna
+              </button>
+              <button
+                (mousedown)="$event.stopPropagation()"
+                (click)="store.selectedTableId.set(table.id); rightTab.set('code')"
+                class="hover:text-emerald-400 font-mono transition"
+              >
+                Ver código →
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Bottom Left Legend & Zoom HUD Controls -->
+      <div
+        class="absolute bottom-3 left-3 px-3 py-1.5 rounded-lg border flex items-center gap-4 text-xs shadow-lg backdrop-blur-md z-20"
+        style="background-color: var(--bg-panel); border-color: var(--border-strong)"
+      >
+        <div class="flex items-center gap-3 text-[11px] text-slate-400">
+          <span class="flex items-center gap-1"><b class="text-amber-400">🔑 PK</b> Primaria</span>
+          <span class="flex items-center gap-1"><b class="text-sky-400">🔗 FK</b> Foránea</span>
+          <span class="flex items-center gap-1"><b class="text-rose-400">NN</b> Not Null</span>
+          <span class="flex items-center gap-1"><b class="text-emerald-400">UQ</b> Unique</span>
+        </div>
+
+        <div class="h-4 w-px bg-slate-700"></div>
+
+        <div class="flex items-center gap-1.5 font-mono text-xs">
+          <button
+            (click)="adjustZoom(-0.1)"
+            class="w-6 h-6 rounded hover:bg-slate-700/50 flex items-center justify-center"
+            [class.text-slate-700]="!store.isDarkMode()"
+            [class.text-slate-200]="store.isDarkMode()"
+          >
+            −
+          </button>
+          <span class="w-12 text-center text-slate-300">{{ (zoom() * 100).toFixed(0) }}%</span>
+          <button
+            (click)="adjustZoom(0.1)"
+            class="w-6 h-6 rounded hover:bg-slate-700/50 flex items-center justify-center"
+            [class.text-slate-700]="!store.isDarkMode()"
+            [class.text-slate-200]="store.isDarkMode()"
+          >
+            +
+          </button>
+          <button
+            (click)="resetViewport()"
+            class="px-2 py-0.5 rounded text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 ml-1"
+          >
+            Centrar
+          </button>
+        </div>
+      </div>
+
+      <!-- Bottom Right Live Minimap -->
+      <div
+        class="absolute bottom-3 right-3 w-44 h-28 rounded-lg border shadow-lg overflow-hidden z-20 pointer-events-none opacity-90"
+        style="background-color: var(--bg-panel); border-color: var(--border-strong)"
+      >
+        <div class="px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-slate-400 border-b" style="border-color: var(--border-subtle)">
+          Radar ER
+        </div>
+        <div class="relative w-full h-full">
+          @for (node of minimapNodes(); track node.id) {
+            <div
+              class="absolute w-7 h-4 rounded-sm transition-all"
+              [style.left.px]="node.x"
+              [style.top.px]="node.y"
+              [style.backgroundColor]="node.color"
+              [class.ring-1]="node.isSelected"
+              [class.ring-white]="node.isSelected"
+            ></div>
+          }
+        </div>
+      </div>
+    </main>
+
+    <!-- ==================================================================== -->
+    <!-- 3. RIGHT DRAWER: TABLE INSPECTOR & MULTI-TARGET CODE STUDIO          -->
+    <!-- ==================================================================== -->
+    <aside
+      class="w-[410px] shrink-0 border-l flex flex-col z-20"
+      style="background-color: var(--bg-panel); border-color: var(--border-subtle)"
+    >
+      <!-- Top Mode Switcher Tabs -->
+      <div
+        class="flex border-b text-xs font-semibold"
+        style="background-color: var(--bg-surface); border-color: var(--border-subtle)"
+      >
+        <button
+          (click)="rightTab.set('inspector')"
+          class="flex-1 py-2.5 border-b-2 transition flex items-center justify-center gap-1.5"
+          [ngClass]="
+            rightTab() === 'inspector'
+              ? 'border-blue-500 text-blue-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          "
+        >
+          <span>🛠️</span> Inspector de Tabla
+        </button>
+        <button
+          (click)="rightTab.set('code')"
+          class="flex-1 py-2.5 border-b-2 transition flex items-center justify-center gap-1.5"
+          [ngClass]="
+            rightTab() === 'code'
+              ? 'border-blue-500 text-blue-400'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          "
+        >
+          <span>⚡</span> Generador Full-Stack
+        </button>
+      </div>
+
+      <!-- ================================================================== -->
+      <!-- TAB 1: TABLE & COLUMNS INSPECTOR                                   -->
+      <!-- ================================================================== -->
+      @if (rightTab() === 'inspector') {
+        @if (store.selectedTable(); as table) {
+          <div class="flex-1 overflow-y-auto p-3.5 space-y-4 text-xs">
+            <!-- Table Metadata Card -->
+            <div
+              class="p-3 rounded-lg border space-y-3"
+              style="background-color: var(--bg-surface); border-color: var(--border-strong)"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Definición de Tabla
+                </span>
+                <div class="flex items-center gap-1.5">
+                  <button
+                    (click)="store.duplicateTable(table.id); showToast('Tabla duplicada')"
+                    class="px-2 py-0.5 rounded border text-[11px] hover:bg-slate-700/40 text-slate-300"
+                    style="border-color: var(--border-strong)"
+                  >
+                    Duplicar
+                  </button>
+                  @if (store.tables().length > 1) {
+                    <button
+                      (click)="store.deleteTable(table.id); showToast('Tabla eliminada')"
+                      class="px-2 py-0.5 rounded border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/25 text-rose-400 text-[11px]"
+                    >
+                      Eliminar
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <!-- Schema + Table Name -->
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="block text-[11px] text-slate-400 mb-1">Esquema PG</label>
+                  <input
+                    type="text"
+                    [ngModel]="table.schema"
+                    (ngModelChange)="store.updateTableMeta(table.id, { schema: $event })"
+                    class="w-full px-2 py-1.5 rounded border font-mono text-xs bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    [class.text-slate-800]="!store.isDarkMode()"
+                    [class.text-slate-100]="store.isDarkMode()"
+                    style="border-color: var(--border-strong)"
+                  />
+                </div>
+                <div class="col-span-2">
+                  <label class="block text-[11px] text-slate-400 mb-1">Nombre de Tabla</label>
+                  <input
+                    type="text"
+                    [ngModel]="table.name"
+                    (ngModelChange)="store.updateTableMeta(table.id, { name: $event })"
+                    class="w-full px-2.5 py-1.5 rounded border font-mono text-xs bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    [class.text-slate-800]="!store.isDarkMode()"
+                    [class.text-slate-100]="store.isDarkMode()"
+                    style="border-color: var(--border-strong)"
+                  />
+                </div>
+              </div>
+
+              <!-- Table Description / Comment -->
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1">
+                  Comentario SQL / XML Doc C# / JSDoc Angular
+                </label>
+                <input
+                  type="text"
+                  [ngModel]="table.comment"
+                  (ngModelChange)="store.updateTableMeta(table.id, { comment: $event })"
+                  placeholder="Descripción de la entidad..."
+                  class="w-full px-2.5 py-1.5 rounded border text-xs bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  [class.text-slate-800]="!store.isDarkMode()"
+                  [class.text-slate-100]="store.isDarkMode()"
+                  style="border-color: var(--border-strong)"
+                />
+              </div>
+
+              <!-- Color Swatches -->
+              <div>
+                <label class="block text-[11px] text-slate-400 mb-1.5">Color de Cabecera</label>
+                <div class="flex items-center gap-2">
+                  @for (c of tableColors; track c.hex) {
+                    <button
+                      (click)="store.updateTableMeta(table.id, { color: c.hex })"
+                      [style.backgroundColor]="c.hex"
+                      class="w-5 h-5 rounded-full transition-transform hover:scale-110"
+                      [class.ring-2]="table.color === c.hex"
+                      [class.ring-white]="table.color === c.hex"
+                      [title]="c.name"
+                    ></button>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Columns Section Header -->
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Columnas ({{ table.columns.length }})
+              </span>
+              <div class="flex items-center gap-1.5">
+                <button
+                  (click)="openFkModal()"
+                  class="px-2 py-1 rounded border text-xs font-medium hover:bg-slate-700/40 text-sky-400"
+                  style="border-color: var(--border-strong)"
+                >
+                  + FK
+                </button>
+                <button
+                  (click)="store.addColumn(table.id)"
+                  class="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium"
+                >
+                  + Añadir Columna
+                </button>
+              </div>
+            </div>
+
+            <!-- Columns List Cards -->
+            <div class="space-y-2">
+              @for (col of table.columns; track col.id) {
+                <div
+                  class="p-2.5 rounded-lg border space-y-2 transition"
+                  style="background-color: var(--bg-surface); border-color: var(--border-strong)"
+                >
+                  <!-- Row 1: Column Name, Data Type, Reorder & Delete -->
+                  <div class="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      [ngModel]="col.name"
+                      (ngModelChange)="store.updateColumn(table.id, col.id, { name: $event })"
+                      class="flex-1 min-w-0 px-2 py-1 rounded border font-mono text-xs bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      [class.text-slate-800]="!store.isDarkMode()"
+                      [class.text-slate-100]="store.isDarkMode()"
+                      style="border-color: var(--border-strong)"
+                    />
+
+                    <select
+                      [ngModel]="col.type"
+                      (ngModelChange)="store.updateColumn(table.id, col.id, { type: $event })"
+                      class="w-32 px-1.5 py-1 rounded border font-mono text-xs bg-slate-900 text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      style="border-color: var(--border-strong)"
+                    >
+                      @for (tp of pgTypes; track tp) {
+                        <option [value]="tp">{{ tp }}</option>
+                      }
+                    </select>
+
+                    <div class="flex items-center">
+                      <button
+                        (click)="store.moveColumnOrder(table.id, col.id, -1)"
+                        class="px-1 text-slate-400 hover:text-white"
+                        title="Subir columna"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        (click)="store.moveColumnOrder(table.id, col.id, 1)"
+                        class="px-1 text-slate-400 hover:text-white"
+                        title="Bajar columna"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        (click)="store.deleteColumn(table.id, col.id)"
+                        [disabled]="table.columns.length <= 1"
+                        class="px-1 text-slate-400 hover:text-rose-400 disabled:opacity-25"
+                        title="Eliminar columna"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Row 2: Flags (PK, NOT NULL, UNIQUE) + Default Value -->
+                  <div class="flex items-center justify-between gap-2 pt-0.5">
+                    <div class="flex items-center gap-3">
+                      <label class="flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          [ngModel]="col.pk"
+                          (ngModelChange)="store.updateColumn(table.id, col.id, { pk: $event })"
+                          class="accent-amber-500"
+                        />
+                        <span class="text-amber-400 font-semibold">PK</span>
+                      </label>
+
+                      <label class="flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          [ngModel]="col.nn || col.pk"
+                          [disabled]="col.pk"
+                          (ngModelChange)="store.updateColumn(table.id, col.id, { nn: $event })"
+                          class="accent-rose-500"
+                        />
+                        <span class="text-rose-400 font-semibold">NN</span>
+                      </label>
+
+                      <label class="flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          [ngModel]="col.unique"
+                          (ngModelChange)="store.updateColumn(table.id, col.id, { unique: $event })"
+                          class="accent-emerald-500"
+                        />
+                        <span class="text-emerald-400 font-semibold">UQ</span>
+                      </label>
+                    </div>
+
+                    <input
+                      type="text"
+                      [ngModel]="col.defaultValue"
+                      (ngModelChange)="store.updateColumn(table.id, col.id, { defaultValue: $event })"
+                      placeholder="DEFAULT (ej. now())"
+                      class="w-36 px-2 py-0.5 rounded border font-mono text-[11px] bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      [class.text-slate-800]="!store.isDarkMode()"
+                      [class.text-slate-200]="store.isDarkMode()"
+                      style="border-color: var(--border-strong)"
+                    />
+                  </div>
+
+                  <!-- Row 3: Foreign Key Info Badge if present -->
+                  @if (col.fk; as fk) {
+                    <div
+                      class="px-2 py-1 rounded bg-sky-500/10 border border-sky-500/30 flex items-center justify-between text-[11px]"
+                    >
+                      <span class="text-sky-400 font-mono truncate">
+                        🔗 FK → <b>{{ getTargetTableName(fk.targetTableId) }}</b> ({{ fk.onDelete }})
+                      </span>
+                      <button
+                        (click)="removeColumnFk(table.id, col.id)"
+                        class="text-rose-400 hover:underline ml-2 shrink-0"
+                      >
+                        Quitar FK
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      }
+
+      <!-- ================================================================== -->
+      <!-- TAB 2: MULTI-LANGUAGE FULL-STACK CODE GENERATOR                    -->
+      <!-- ================================================================== -->
+      @if (rightTab() === 'code') {
+        <div class="flex-1 flex flex-col overflow-hidden text-xs">
+          <!-- Language Sub-navigation -->
+          <div
+            class="p-2.5 border-b space-y-2.5"
+            style="background-color: var(--bg-surface); border-color: var(--border-subtle)"
+          >
+            <div class="grid grid-cols-3 gap-1.5">
+              <button
+                (click)="openCodeGenerator('sql')"
+                class="py-1.5 px-2 rounded-md font-semibold transition flex items-center justify-center gap-1"
+                [ngClass]="
+                  activeCodeLang() === 'sql'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'bg-slate-800/70 text-slate-300 hover:bg-slate-700'
+                "
+              >
+                <span>🐘</span> PostgreSQL
+              </button>
+              <button
+                (click)="openCodeGenerator('csharp')"
+                class="py-1.5 px-2 rounded-md font-semibold transition flex items-center justify-center gap-1"
+                [ngClass]="
+                  activeCodeLang() === 'csharp'
+                    ? 'bg-purple-600 text-white shadow'
+                    : 'bg-slate-800/70 text-slate-300 hover:bg-slate-700'
+                "
+              >
+                <span>#</span> C# Entities
+              </button>
+              <button
+                (click)="openCodeGenerator('angular')"
+                class="py-1.5 px-2 rounded-md font-semibold transition flex items-center justify-center gap-1"
+                [ngClass]="
+                  activeCodeLang() === 'angular'
+                    ? 'bg-rose-600 text-white shadow'
+                    : 'bg-slate-800/70 text-slate-300 hover:bg-slate-700'
+                "
+              >
+                <span>🅰️</span> Angular TS
+              </button>
+            </div>
+
+            <!-- C# Specific Options (Namespace, EF Core DataAnnotations, record vs class) -->
+            @if (activeCodeLang() === 'csharp') {
+              <div
+                class="p-2 rounded border space-y-2 text-[11px]"
+                style="background-color: var(--bg-panel); border-color: var(--border-strong)"
+              >
+                <div class="flex items-center gap-2">
+                  <span class="text-slate-400 shrink-0">Namespace:</span>
+                  <input
+                    type="text"
+                    [ngModel]="store.project().csharpNamespace"
+                    (ngModelChange)="store.updateProjectConfig({ csharpNamespace: $event })"
+                    class="flex-1 px-2 py-0.5 rounded border font-mono bg-transparent text-slate-100"
+                    style="border-color: var(--border-strong)"
+                  />
+                </div>
+                <div class="flex items-center justify-between">
+                  <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                    <input
+                      type="checkbox"
+                      [ngModel]="store.project().useEfDataAnnotations"
+                      (ngModelChange)="store.updateProjectConfig({ useEfDataAnnotations: $event })"
+                      class="accent-purple-500"
+                    />
+                    <span>EF Core DataAnnotations</span>
+                  </label>
+
+                  <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                    <input
+                      type="checkbox"
+                      [ngModel]="store.project().useCSharpRecords"
+                      (ngModelChange)="store.updateProjectConfig({ useCSharpRecords: $event })"
+                      class="accent-purple-500"
+                    />
+                    <span>Usar C# Records</span>
+                  </label>
+                </div>
+              </div>
+            }
+
+            <!-- File selector pills (All vs Per-Entity File) -->
+            @if (activeCodeLang() !== 'sql') {
+              <div class="flex items-center gap-1 overflow-x-auto pb-1">
+                <button
+                  (click)="selectedFileIndex.set(-1)"
+                  class="px-2 py-0.5 rounded font-mono text-[11px] shrink-0 transition"
+                  [ngClass]="
+                    selectedFileIndex() === -1
+                      ? 'bg-slate-200 text-slate-900 font-semibold'
+                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                  "
+                >
+                  Todos ({{ filteredGeneratedFiles().length }})
+                </button>
+                @for (f of filteredGeneratedFiles(); track f.filename; let idx = $index) {
+                  <button
+                    (click)="selectedFileIndex.set(idx)"
+                    class="px-2 py-0.5 rounded font-mono text-[11px] shrink-0 transition"
+                    [ngClass]="
+                      selectedFileIndex() === idx
+                        ? 'bg-slate-200 text-slate-900 font-semibold'
+                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                    "
+                  >
+                    {{ f.filename }}
+                  </button>
+                }
+              </div>
+            }
+
+            <!-- Code Action Bar -->
+            <div class="flex items-center justify-between pt-0.5">
+              <span class="font-mono text-[11px] text-slate-400">
+                {{
+                  activeCodeLang() === 'sql'
+                    ? 'PostgreSQL 16+ DDL + Indexes'
+                    : activeCodeLang() === 'csharp'
+                    ? '.NET 8 EF Core Entities'
+                    : 'Angular Interfaces + Create/Update DTOs'
+                }}
+              </span>
+              <div class="flex items-center gap-1.5">
+                <button
+                  (click)="copyActiveCode()"
+                  class="px-2.5 py-1 rounded border text-xs font-medium hover:bg-slate-700/50 text-slate-200 transition"
+                  style="border-color: var(--border-strong)"
+                >
+                  📋 Copiar
+                </button>
+                <button
+                  (click)="downloadCurrentCodeFile()"
+                  class="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition"
+                >
+                  ⬇ Descargar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Code Output Viewer -->
+          <pre
+            class="flex-1 p-3.5 overflow-auto font-mono text-[11.5px] leading-relaxed select-text whitespace-pre"
+            style="background-color: #070a12; color: #e2e8f0"
+          >{{ activeCodeContent() }}</pre>
+        </div>
+      }
+    </aside>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- MODAL 1: CREATE FOREIGN KEY RELATIONSHIP                               -->
+  <!-- ====================================================================== -->
+  @if (showFkModal()) {
+    <div class="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div
+        class="w-[420px] rounded-xl border p-4 space-y-4 text-xs shadow-2xl"
+        style="background-color: var(--bg-panel); border-color: var(--border-strong)"
+      >
+        <div class="flex items-center justify-between border-b pb-2.5" style="border-color: var(--border-subtle)">
+          <div class="flex items-center gap-2">
+            <span class="text-sky-400 text-base">🔗</span>
+            <span class="font-bold text-sm text-white">Crear Relación Foreign Key (1:N)</span>
+          </div>
+          <button (click)="showFkModal.set(false)" class="text-slate-400 hover:text-white text-sm">
+            ✕
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-slate-400 mb-1">
+              Tabla Hija (Origen que contendrá la columna Foreign Key)
+            </label>
+            <select
+              [(ngModel)]="fkChildTableId"
+              class="w-full px-2.5 py-1.5 rounded border bg-slate-900 text-slate-100 font-mono"
+              style="border-color: var(--border-strong)"
+            >
+              @for (t of store.tables(); track t.id) {
+                <option [value]="t.id">{{ t.schema }}.{{ t.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-slate-400 mb-1">
+              Tabla Padre (Destino referenciado por su Primary Key)
+            </label>
+            <select
+              [(ngModel)]="fkParentTableId"
+              (ngModelChange)="onFkParentTableChange()"
+              class="w-full px-2.5 py-1.5 rounded border bg-slate-900 text-slate-100 font-mono"
+              style="border-color: var(--border-strong)"
+            >
+              @for (t of store.tables(); track t.id) {
+                <option [value]="t.id">{{ t.schema }}.{{ t.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-slate-400 mb-1">Nombre de la columna FK</label>
+            <input
+              type="text"
+              [(ngModel)]="fkColumnName"
+              class="w-full px-2.5 py-1.5 rounded border bg-slate-900 text-slate-100 font-mono"
+              style="border-color: var(--border-strong)"
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-slate-400 mb-1">ON DELETE</label>
+              <select
+                [(ngModel)]="fkOnDelete"
+                class="w-full px-2 py-1.5 rounded border bg-slate-900 text-slate-100 font-mono"
+                style="border-color: var(--border-strong)"
+              >
+                @for (act of refActions; track act) {
+                  <option [value]="act">{{ act }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">ON UPDATE</label>
+              <select
+                [(ngModel)]="fkOnUpdate"
+                class="w-full px-2 py-1.5 rounded border bg-slate-900 text-slate-100 font-mono"
+                style="border-color: var(--border-strong)"
+              >
+                @for (act of refActions; track act) {
+                  <option [value]="act">{{ act }}</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t" style="border-color: var(--border-subtle)">
+          <button
+            (click)="showFkModal.set(false)"
+            class="px-3 py-1.5 rounded border text-slate-300 hover:bg-slate-800"
+            style="border-color: var(--border-strong)"
+          >
+            Cancelar
+          </button>
+          <button
+            (click)="confirmCreateFk()"
+            class="px-3.5 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-semibold"
+          >
+            Crear Foreign Key
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ====================================================================== -->
+  <!-- MODAL 2: REVERSE ENGINEER POSTGRESQL DDL -> VISUAL DIAGRAM             -->
+  <!-- ====================================================================== -->
+  @if (showImportSqlModal()) {
+    <div class="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div
+        class="w-[620px] rounded-xl border p-4 space-y-3.5 text-xs shadow-2xl"
+        style="background-color: var(--bg-panel); border-color: var(--border-strong)"
+      >
+        <div class="flex items-center justify-between border-b pb-2.5" style="border-color: var(--border-subtle)">
+          <div>
+            <span class="font-bold text-sm text-white">
+              📥 Ingeniería Inversa desde PostgreSQL DDL
+            </span>
+            <p class="text-[11px] text-slate-400">
+              Pega tus sentencias CREATE TABLE y ALTER TABLE para construir el diagrama ER y generar C# + Angular TS.
+            </p>
+          </div>
+          <button
+            (click)="showImportSqlModal.set(false)"
+            class="text-slate-400 hover:text-white text-sm"
+          >
+            ✕
+          </button>
+        </div>
+
+        <textarea
+          [(ngModel)]="importSqlText"
+          rows="13"
+          class="w-full p-3 rounded-lg border font-mono text-xs bg-slate-950 text-emerald-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          style="border-color: var(--border-strong)"
+        ></textarea>
+
+        <div class="flex items-center justify-between pt-1">
+          <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+            <input
+              type="checkbox"
+              [(ngModel)]="importReplaceExisting"
+              class="accent-blue-500"
+            />
+            <span>Reemplazar las tablas actuales del lienzo</span>
+          </label>
+
+          <div class="flex items-center gap-2">
+            <button
+              (click)="showImportSqlModal.set(false)"
+              class="px-3 py-1.5 rounded border text-slate-300 hover:bg-slate-800"
+              style="border-color: var(--border-strong)"
+            >
+              Cancelar
+            </button>
+            <button
+              (click)="confirmImportSql()"
+              class="px-4 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-semibold"
+            >
+              ⚡ Parsear SQL y Dibujar Diagrama
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ====================================================================== -->
+  <!-- FLOATING TOAST NOTIFICATION                                            -->
+  <!-- ====================================================================== -->
+  @if (toastMessage(); as msg) {
+    <div
+      class="fixed top-16 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-slate-900/95 border border-blue-500/50 text-white text-xs font-medium shadow-2xl flex items-center gap-2 z-50"
+    >
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+      <span>{{ msg }}</span>
+    </div>
+  }
+</div>

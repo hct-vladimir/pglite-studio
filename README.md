@@ -28,7 +28,7 @@ Construida 100% en **Angular 19** usando **Signals** para reactividad instantán
 - **Exportación Full-Stack (`.ZIP` y `.pglite.json`)**:
   - Descarga en un clic un paquete `.zip` con `/sql`, `/csharp-entities`, `/angular-models` y el archivo de proyecto `.pglite.json` versionable en Git.
 
-Consulta el historial completo de versiones en [CHANGELOG.md](./CHANGELOG.md) o desde el botón de versión (`v0.3.0`) en la barra superior de la aplicación.
+Consulta el historial completo de versiones en [CHANGELOG.md](./CHANGELOG.md) o desde el botón de versión (`v0.4.0`) en la barra superior de la aplicación.
 
 > **Nota para colaboradores y agentes de IA:** Consulta [AGENTS.md](./AGENTS.md) para las convenciones del repo y el recordatorio de mantener sincronizados `CHANGELOG.md` y `src/app/data/changelog.data.ts` en cada cambio relevante.
 

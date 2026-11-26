@@ -928,17 +928,26 @@ export class ErStoreService {
     const sortedDepths = Array.from(columnsByDepth.keys()).sort((a, b) => a - b);
     const updatedPositions = new Map<string, { x: number; y: number }>();
 
-    sortedDepths.forEach((depth, colIndex) => {
+    let currentX = 60;
+    sortedDepths.forEach((depth) => {
       const group = columnsByDepth.get(depth) ?? [];
       let currentY = 60;
+      let maxColWidth = 280;
+
       for (const tbl of group) {
+        const headerLen = `${tbl.schema}.${tbl.name}`.length * 7.6 + 68;
+        const estW = Math.max(240, Math.min(390, Math.round(headerLen)));
+        if (estW > maxColWidth) maxColWidth = estW;
+
         updatedPositions.set(tbl.id, {
-          x: 60 + colIndex * 360,
+          x: currentX,
           y: currentY,
         });
         const cardEstimatedHeight = 56 + tbl.columns.length * 30 + 36;
         currentY += cardEstimatedHeight;
       }
+
+      currentX += maxColWidth + 96;
     });
 
     this.project.update(p => ({

@@ -4,6 +4,18 @@ Todos los cambios notables de **pgLite Studio** se documentan en este archivo si
 
 ---
 
+## [0.4.0] — 2026-11-26
+
+### Added
+- **Auto-width inteligente por tabla (`240px – 390px`)**: cada caja de tabla calcula dinámicamente su ancho óptimo según `schema.tabla` y la columna más larga, manteniendo alineados al píxel los conectores SVG *Crow's Foot*, puertos `PK` y el Auto-Layout.
+- **Paneles laterales redimensionables**: separadores arrastrables (`cursor-col-resize`) entre el Explorador izquierdo (`180px – 380px`), el lienzo y el panel derecho de Inspector/Código (`320px – 760px`), con doble clic para restaurar el ancho por defecto.
+- **Modo Enfoque (Colapsar/Expandir paneles)**: botones `◧` / `◨` para ocultar el Explorador y/o el Panel Derecho y aprovechar el 100% del lienzo ER, con persistencia en `localStorage`.
+
+### Fixed
+- Eliminado el espacio accidental entre `schema.` y el nombre de tabla en la cabecera de las cajas y agregados tooltips nativos (`title`) para nombres extensos.
+
+---
+
 ## [0.3.0] — 2026-11-26
 
 ### Added

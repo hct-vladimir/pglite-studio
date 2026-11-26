@@ -71,6 +71,118 @@ export class AppComponent {
   readonly activeCodeLang = signal<'sql' | 'csharp' | 'angular'>('sql');
   readonly selectedFileIndex = signal<number>(0);
 
+  // Resizable & Collapsible Sidebars State (persisted in localStorage)
+  private static readonly LAYOUT_KEY = 'pglite_studio_layout_v1';
+  private static readonly DEFAULT_LEFT_WIDTH = 240;
+  private static readonly DEFAULT_RIGHT_WIDTH = 410;
+
+  readonly leftSidebarOpen = signal<boolean>(this.loadLayoutPref().leftOpen);
+  readonly rightSidebarOpen = signal<boolean>(this.loadLayoutPref().rightOpen);
+  readonly leftSidebarWidth = signal<number>(this.loadLayoutPref().leftWidth);
+  readonly rightSidebarWidth = signal<number>(this.loadLayoutPref().rightWidth);
+  readonly resizingPanel = signal<'left' | 'right' | null>(null);
+
+  private resizeStartX = 0;
+  private resizeStartWidth = 0;
+
+  private loadLayoutPref(): {
+    leftOpen: boolean;
+    rightOpen: boolean;
+    leftWidth: number;
+    rightWidth: number;
+  } {
+    const defaults = {
+      leftOpen: true,
+      rightOpen: true,
+      leftWidth: AppComponent.DEFAULT_LEFT_WIDTH,
+      rightWidth: AppComponent.DEFAULT_RIGHT_WIDTH,
+    };
+    try {
+      const raw = localStorage.getItem(AppComponent.LAYOUT_KEY);
+      if (!raw) return defaults;
+      const parsed = JSON.parse(raw);
+      return {
+        leftOpen: typeof parsed.leftOpen === 'boolean' ? parsed.leftOpen : defaults.leftOpen,
+        rightOpen: typeof parsed.rightOpen === 'boolean' ? parsed.rightOpen : defaults.rightOpen,
+        leftWidth:
+          typeof parsed.leftWidth === 'number'
+            ? Math.max(180, Math.min(380, parsed.leftWidth))
+            : defaults.leftWidth,
+        rightWidth:
+          typeof parsed.rightWidth === 'number'
+            ? Math.max(320, Math.min(760, parsed.rightWidth))
+            : defaults.rightWidth,
+      };
+    } catch {
+      return defaults;
+    }
+  }
+
+  private saveLayoutPref(): void {
+    try {
+      localStorage.setItem(
+        AppComponent.LAYOUT_KEY,
+        JSON.stringify({
+          leftOpen: this.leftSidebarOpen(),
+          rightOpen: this.rightSidebarOpen(),
+          leftWidth: this.leftSidebarWidth(),
+          rightWidth: this.rightSidebarWidth(),
+        })
+      );
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
+  toggleLeftSidebar(): void {
+    this.leftSidebarOpen.update(v => !v);
+    this.saveLayoutPref();
+  }
+
+  toggleRightSidebar(): void {
+    this.rightSidebarOpen.update(v => !v);
+    this.saveLayoutPref();
+  }
+
+  onStartResizePanel(event: MouseEvent, side: 'left' | 'right'): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.resizingPanel.set(side);
+    this.resizeStartX = event.clientX;
+    this.resizeStartWidth =
+      side === 'left' ? this.leftSidebarWidth() : this.rightSidebarWidth();
+  }
+
+  resetPanelWidth(side: 'left' | 'right'): void {
+    if (side === 'left') {
+      this.leftSidebarWidth.set(AppComponent.DEFAULT_LEFT_WIDTH);
+    } else {
+      this.rightSidebarWidth.set(AppComponent.DEFAULT_RIGHT_WIDTH);
+    }
+    this.saveLayoutPref();
+  }
+
+  /**
+   * Smart Auto-Width per table card (240px - 390px) based on header & longest column content.
+   * Deterministic so SVG Crow's Foot connectors and PK ports align to the exact pixel.
+   */
+  getTableWidth(table: ErTable): number {
+    const headerChars = `${table.schema}.${table.name}`.length;
+    const headerWidth = headerChars * 7.6 + 68;
+
+    let maxRowWidth = 0;
+    for (const col of table.columns) {
+      const nameW = col.name.length * 7.4;
+      const typeW = (col.type || '').length * 6.8;
+      const badgesW = (col.nn || col.pk ? 26 : 0) + (col.unique && !col.pk ? 26 : 0);
+      const rowW = 48 + nameW + 18 + typeW + badgesW + 16;
+      if (rowW > maxRowWidth) maxRowWidth = rowW;
+    }
+
+    const ideal = Math.max(headerWidth, maxRowWidth);
+    return Math.max(240, Math.min(390, Math.round(ideal)));
+  }
+
   // Interactive Port Cable Dragging (Drag from a Parent PK port to any Child Table)
   readonly draggingCable = signal<{
     parentTableId: string;
@@ -157,15 +269,16 @@ CREATE TABLE core.empleados (
     const selectedId = this.store.selectedTableId();
     const paths: SvgRelationshipPath[] = [];
 
-    const CARD_WIDTH = 272;
     const HEADER_HEIGHT = 38;
     const ROW_HEIGHT = 29;
 
     for (const sourceTable of allTables) {
+      const srcWidth = this.getTableWidth(sourceTable);
       sourceTable.columns.forEach((col, colIndex) => {
         if (!col.fk) return;
         const targetTable = allTables.find(t => t.id === col.fk!.targetTableId);
         if (!targetTable) return;
+        const tgtWidth = this.getTableWidth(targetTable);
 
         let targetColIndex = targetTable.columns.findIndex(c => c.id === col.fk!.targetColId);
         if (targetColIndex === -1) {
@@ -173,8 +286,8 @@ CREATE TABLE core.empleados (
         }
         if (targetColIndex === -1) targetColIndex = 0;
 
-        const srcCenterX = sourceTable.x + CARD_WIDTH / 2;
-        const tgtCenterX = targetTable.x + CARD_WIDTH / 2;
+        const srcCenterX = sourceTable.x + srcWidth / 2;
+        const tgtCenterX = targetTable.x + tgtWidth / 2;
 
         let x1: number;
         let x2: number;
@@ -182,18 +295,18 @@ CREATE TABLE core.empleados (
         let dir2: number;
 
         if (srcCenterX < tgtCenterX - 60) {
-          x1 = sourceTable.x + CARD_WIDTH;
+          x1 = sourceTable.x + srcWidth;
           x2 = targetTable.x;
           dir1 = 1;
           dir2 = -1;
         } else if (srcCenterX > tgtCenterX + 60) {
           x1 = sourceTable.x;
-          x2 = targetTable.x + CARD_WIDTH;
+          x2 = targetTable.x + tgtWidth;
           dir1 = -1;
           dir2 = 1;
         } else {
-          x1 = sourceTable.x + CARD_WIDTH;
-          x2 = targetTable.x + CARD_WIDTH;
+          x1 = sourceTable.x + srcWidth;
+          x2 = targetTable.x + tgtWidth;
           dir1 = 1;
           dir2 = 1;
         }
@@ -275,7 +388,8 @@ CREATE TABLE core.empleados (
       if (tbl) {
         const vpWidth = this.canvasViewport?.nativeElement.clientWidth || 800;
         const vpHeight = this.canvasViewport?.nativeElement.clientHeight || 600;
-        this.panX.set(vpWidth / 2 - (tbl.x + 136) * this.zoom());
+        const halfW = this.getTableWidth(tbl) / 2;
+        this.panX.set(vpWidth / 2 - (tbl.x + halfW) * this.zoom());
         this.panY.set(vpHeight / 2 - (tbl.y + 110) * this.zoom());
       }
     }
@@ -285,6 +399,10 @@ CREATE TABLE core.empleados (
     this.activeCodeLang.set(lang);
     this.selectedFileIndex.set(-1); // Show full bundle by default
     this.rightTab.set('code');
+    if (!this.rightSidebarOpen()) {
+      this.rightSidebarOpen.set(true);
+      this.saveLayoutPref();
+    }
   }
 
   // Canvas Zoom & Pan handlers
@@ -346,10 +464,9 @@ CREATE TABLE core.empleados (
     event.stopPropagation();
     event.preventDefault();
 
-    const CARD_WIDTH = 272;
     const HEADER_HEIGHT = 38;
     const ROW_HEIGHT = 29;
-    const startX = parentTable.x + CARD_WIDTH;
+    const startX = parentTable.x + this.getTableWidth(parentTable);
     const startY = parentTable.y + HEADER_HEIGHT + colIndex * ROW_HEIGHT + ROW_HEIGHT / 2;
 
     this.draggingCable.set({
@@ -382,6 +499,19 @@ CREATE TABLE core.empleados (
 
   @HostListener('window:mousemove', ['$event'])
   onGlobalMouseMove(event: MouseEvent): void {
+    const resizing = this.resizingPanel();
+    if (resizing) {
+      const delta = event.clientX - this.resizeStartX;
+      if (resizing === 'left') {
+        const nextW = Math.max(180, Math.min(380, this.resizeStartWidth + delta));
+        this.leftSidebarWidth.set(nextW);
+      } else {
+        const nextW = Math.max(320, Math.min(760, this.resizeStartWidth - delta));
+        this.rightSidebarWidth.set(nextW);
+      }
+      return;
+    }
+
     if (this.isPanning()) {
       this.panX.set(this.panOrigX + (event.clientX - this.panStartX));
       this.panY.set(this.panOrigY + (event.clientY - this.panStartY));
@@ -402,6 +532,10 @@ CREATE TABLE core.empleados (
 
   @HostListener('window:mouseup')
   onGlobalMouseUp(): void {
+    if (this.resizingPanel()) {
+      this.resizingPanel.set(null);
+      this.saveLayoutPref();
+    }
     if (this.isPanning()) {
       this.isPanning.set(false);
     }
@@ -603,7 +737,7 @@ CREATE TABLE core.empleados (
 
     const minX = Math.min(...tables.map(t => t.x));
     const minY = Math.min(...tables.map(t => t.y));
-    const maxX = Math.max(...tables.map(t => t.x + 280));
+    const maxX = Math.max(...tables.map(t => t.x + this.getTableWidth(t) + 12));
     const maxY = Math.max(...tables.map(t => t.y + 70 + t.columns.length * 30));
 
     const contentW = Math.max(300, maxX - minX);

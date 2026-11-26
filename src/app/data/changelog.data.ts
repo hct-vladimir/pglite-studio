@@ -9,13 +9,37 @@ export interface ChangelogEntry {
   }[];
 }
 
-export const APP_VERSION = 'v0.3.0';
+export const APP_VERSION = 'v0.4.0';
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
-    version: 'v0.3.0',
+    version: 'v0.4.0',
     date: '2026-11-26',
     tag: 'latest',
+    title: 'UX Pro: Auto-width de tablas y paneles redimensionables / colapsables',
+    highlights: [
+      {
+        type: 'added',
+        text: 'Auto-width inteligente por tabla (240px–390px) para evitar cortes en nombres largos, sincronizado con conectores SVG y Auto-Layout.',
+      },
+      {
+        type: 'added',
+        text: 'Paneles izquierdo y derecho redimensionables por arrastre (doble clic para restaurar el ancho por defecto).',
+      },
+      {
+        type: 'added',
+        text: 'Botones para ocultar/expandir ambos paneles laterales (Modo Enfoque de lienzo completo) con preferencias guardadas en localStorage.',
+      },
+      {
+        type: 'fixed',
+        text: 'Eliminado el espacio entre schema. y nombre de tabla en la cabecera y añadidos tooltips en títulos y columnas.',
+      },
+    ],
+  },
+  {
+    version: 'v0.3.0',
+    date: '2026-11-26',
+    tag: 'release',
     title: 'Constraints avanzados, índices explícitos y Changelog integrado',
     highlights: [
       {

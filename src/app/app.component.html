@@ -260,36 +260,50 @@
   <!-- ====================================================================== -->
   <!-- MAIN 3-COLUMN WORKSPACE                                                -->
   <!-- ====================================================================== -->
-  <div class="flex-1 flex overflow-hidden relative">
+  <div
+    class="flex-1 flex overflow-hidden relative"
+    [class.cursor-col-resize]="resizingPanel() !== null"
+  >
     <!-- ==================================================================== -->
     <!-- 1. LEFT SIDEBAR: OBJECT EXPLORER (pgModeler Style)                   -->
     <!-- ==================================================================== -->
-    <aside
-      class="w-60 shrink-0 border-r flex flex-col justify-between z-20"
-      style="background-color: var(--bg-panel); border-color: var(--border-subtle)"
-    >
-      <div class="flex-1 flex flex-col overflow-hidden">
-        <!-- Explorer Header & Filter -->
-        <div class="p-3 border-b space-y-2" style="border-color: var(--border-subtle)">
-          <div class="flex items-center justify-between">
-            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Explorador de Esquema
-            </span>
-            <span class="text-[11px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
-              {{ store.tables().length }} tablas
-            </span>
+    @if (leftSidebarOpen()) {
+      <aside
+        [style.width.px]="leftSidebarWidth()"
+        class="shrink-0 border-r flex flex-col justify-between z-20"
+        style="background-color: var(--bg-panel); border-color: var(--border-subtle)"
+      >
+        <div class="flex-1 flex flex-col overflow-hidden">
+          <!-- Explorer Header & Filter -->
+          <div class="p-3 border-b space-y-2" style="border-color: var(--border-subtle)">
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 truncate">
+                Explorador de Esquema
+              </span>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="text-[11px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
+                  {{ store.tables().length }}
+                </span>
+                <button
+                  (click)="toggleLeftSidebar()"
+                  class="w-5 h-5 rounded hover:bg-slate-700/50 text-slate-400 hover:text-white flex items-center justify-center text-xs transition"
+                  title="Ocultar Explorador (Modo Enfoque)"
+                >
+                  ◧
+                </button>
+              </div>
+            </div>
+            <input
+              type="text"
+              [ngModel]="store.searchQuery()"
+              (ngModelChange)="store.searchQuery.set($event)"
+              placeholder="Filtrar tabla o columna..."
+              class="w-full px-2.5 py-1.5 rounded-md text-xs border bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
+              [class.text-slate-800]="!store.isDarkMode()"
+              [class.text-slate-100]="store.isDarkMode()"
+              style="border-color: var(--border-strong)"
+            />
           </div>
-          <input
-            type="text"
-            [ngModel]="store.searchQuery()"
-            (ngModelChange)="store.searchQuery.set($event)"
-            placeholder="Filtrar tabla o columna..."
-            class="w-full px-2.5 py-1.5 rounded-md text-xs border bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
-            [class.text-slate-800]="!store.isDarkMode()"
-            [class.text-slate-100]="store.isDarkMode()"
-            style="border-color: var(--border-strong)"
-          />
-        </div>
 
         <!-- Tables Tree List -->
         <div class="flex-1 overflow-y-auto p-2 space-y-1">
@@ -358,7 +372,17 @@
           <span>{{ store.totalRelationsCount() }} relaciones</span>
         </div>
       </div>
-    </aside>
+      </aside>
+
+      <!-- Left Resize Handle -->
+      <div
+        (mousedown)="onStartResizePanel($event, 'left')"
+        (dblclick)="resetPanelWidth('left')"
+        class="w-1.5 shrink-0 cursor-col-resize z-30 transition-colors hover:bg-blue-500/70"
+        [class.bg-blue-500]="resizingPanel() === 'left'"
+        title="Arrastra para redimensionar el Explorador (doble clic para restaurar)"
+      ></div>
+    }
 
     <!-- ==================================================================== -->
     <!-- 2. CENTER INFINITE ER CANVAS (Pan, Zoom, Nodes & SVG Crow's Foot)    -->
@@ -375,6 +399,34 @@
         background-size: 22px 22px;
       "
     >
+      <!-- Floating Expand Buttons when Sidebars are Collapsed -->
+      @if (!leftSidebarOpen()) {
+        <button
+          (mousedown)="$event.stopPropagation()"
+          (click)="toggleLeftSidebar()"
+          class="absolute top-3 left-3 z-30 px-2.5 py-1.5 rounded-lg border text-xs font-medium shadow-lg backdrop-blur-md hover:border-blue-500/70 transition flex items-center gap-1.5"
+          [class.text-slate-800]="!store.isDarkMode()"
+          [class.text-slate-200]="store.isDarkMode()"
+          style="background-color: var(--bg-panel); border-color: var(--border-strong)"
+          title="Mostrar Explorador de Esquema"
+        >
+          <span>◧</span> Explorador
+        </button>
+      }
+
+      @if (!rightSidebarOpen()) {
+        <button
+          (mousedown)="$event.stopPropagation()"
+          (click)="toggleRightSidebar()"
+          class="absolute top-3 right-3 z-30 px-2.5 py-1.5 rounded-lg border text-xs font-medium shadow-lg backdrop-blur-md hover:border-blue-500/70 transition flex items-center gap-1.5"
+          [class.text-slate-800]="!store.isDarkMode()"
+          [class.text-slate-200]="store.isDarkMode()"
+          style="background-color: var(--bg-panel); border-color: var(--border-strong)"
+          title="Mostrar Inspector y Generador de Código"
+        >
+          Inspector / Código <span>◨</span>
+        </button>
+      }
       <!-- World Container with Pan + Scale Transform -->
       <div
         class="absolute top-0 left-0 origin-top-left"
@@ -474,7 +526,8 @@
             (mouseup)="onDropCableOnTable($event, table)"
             [style.left.px]="table.x"
             [style.top.px]="table.y"
-            class="absolute w-[272px] rounded-lg border shadow-xl transition-shadow"
+            [style.width.px]="getTableWidth(table)"
+            class="absolute rounded-lg border shadow-xl transition-shadow"
             style="background-color: var(--bg-panel)"
             [ngClass]="
               store.selectedTableId() === table.id
@@ -488,11 +541,11 @@
             <!-- Table Header (pgModeler classic colored banner) -->
             <div
               [style.backgroundColor]="table.color"
+              [title]="table.schema + '.' + table.name"
               class="h-[38px] px-3 rounded-t-lg text-white flex items-center justify-between gap-2 cursor-grab active:cursor-grabbing"
             >
-              <div class="flex items-center gap-1.5 truncate font-mono text-xs font-bold">
-                <span class="opacity-75 font-normal">{{ table.schema }}.</span>
-                <span class="truncate">{{ table.name }}</span>
+              <div class="truncate font-mono text-xs font-bold min-w-0">
+                <span class="opacity-80 font-normal">{{ table.schema }}.</span><span>{{ table.name }}</span>
               </div>
               <div class="flex items-center gap-1 shrink-0">
                 <span
@@ -529,6 +582,7 @@
 
                     <span
                       class="font-mono truncate text-[12px]"
+                      [title]="col.name + ' (' + col.type + ')'"
                       [class.font-semibold]="col.pk"
                       [class.underline]="col.pk"
                       [class.decoration-amber-400]="col.pk"
@@ -661,38 +715,57 @@
     <!-- ==================================================================== -->
     <!-- 3. RIGHT DRAWER: TABLE INSPECTOR & MULTI-TARGET CODE STUDIO          -->
     <!-- ==================================================================== -->
-    <aside
-      class="w-[410px] shrink-0 border-l flex flex-col z-20"
-      style="background-color: var(--bg-panel); border-color: var(--border-subtle)"
-    >
-      <!-- Top Mode Switcher Tabs -->
+    @if (rightSidebarOpen()) {
+      <!-- Right Resize Handle -->
       <div
-        class="flex border-b text-xs font-semibold"
-        style="background-color: var(--bg-surface); border-color: var(--border-subtle)"
+        (mousedown)="onStartResizePanel($event, 'right')"
+        (dblclick)="resetPanelWidth('right')"
+        class="w-1.5 shrink-0 cursor-col-resize z-30 transition-colors hover:bg-blue-500/70"
+        [class.bg-blue-500]="resizingPanel() === 'right'"
+        title="Arrastra para redimensionar el panel derecho (doble clic para restaurar)"
+      ></div>
+
+      <aside
+        [style.width.px]="rightSidebarWidth()"
+        class="shrink-0 border-l flex flex-col z-20"
+        style="background-color: var(--bg-panel); border-color: var(--border-subtle)"
       >
-        <button
-          (click)="rightTab.set('inspector')"
-          class="flex-1 py-2.5 border-b-2 transition flex items-center justify-center gap-1.5"
-          [ngClass]="
-            rightTab() === 'inspector'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          "
+        <!-- Top Mode Switcher Tabs -->
+        <div
+          class="flex items-center border-b text-xs font-semibold"
+          style="background-color: var(--bg-surface); border-color: var(--border-subtle)"
         >
-          <span>🛠️</span> Inspector de Tabla
-        </button>
-        <button
-          (click)="rightTab.set('code')"
-          class="flex-1 py-2.5 border-b-2 transition flex items-center justify-center gap-1.5"
-          [ngClass]="
-            rightTab() === 'code'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
-          "
-        >
-          <span>⚡</span> Generador Full-Stack
-        </button>
-      </div>
+          <button
+            (click)="rightTab.set('inspector')"
+            class="flex-1 py-2.5 border-b-2 transition flex items-center justify-center gap-1.5"
+            [ngClass]="
+              rightTab() === 'inspector'
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            "
+          >
+            <span>🛠️</span> Inspector de Tabla
+          </button>
+          <button
+            (click)="rightTab.set('code')"
+            class="flex-1 py-2.5 border-b-2 transition flex items-center justify-center gap-1.5"
+            [ngClass]="
+              rightTab() === 'code'
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            "
+          >
+            <span>⚡</span> Generador Full-Stack
+          </button>
+          <button
+            (click)="toggleRightSidebar()"
+            class="px-2.5 py-2 text-slate-400 hover:text-white transition border-l"
+            style="border-color: var(--border-subtle)"
+            title="Ocultar Panel Derecho (Modo Enfoque)"
+          >
+            ◨
+          </button>
+        </div>
 
       <!-- ================================================================== -->
       <!-- TAB 1: TABLE & COLUMNS INSPECTOR                                   -->
@@ -1410,7 +1483,8 @@
           >{{ activeCodeContent() }}</pre>
         </div>
       }
-    </aside>
+      </aside>
+    }
   </div>
 
   <!-- ====================================================================== -->

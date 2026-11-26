@@ -3,7 +3,7 @@
 Guía breve para agentes de IA y colaboradores que trabajen sobre este repositorio.
 
 ## Stack y arquitectura
-- **Framework**: Angular 19 (Standalone Components + Signals API, sin NgModules).
+- **Framework**: Angular 22 (Standalone Components + Signals API, TypeScript 6, sin NgModules).
 - **Estilos**: Tailwind CSS v3 + variables CSS en `src/styles.css`.
 - **Estado**: `src/app/services/er-store.service.ts` (Signals + persistencia en `localStorage` + Undo/Redo).
 - **Generadores / Parsers**:
@@ -20,5 +20,5 @@ Siempre que agregues una funcionalidad visible para el usuario, cambies comporta
 3. Si el cambio es menor o aún está en progreso y no amerita subir de versión, **recuerda sugerir al usuario** al final de tu respuesta si desea actualizar el changelog y/o incrementar `APP_VERSION`.
 
 ## Verificación antes de cerrar o commitear
-- Ejecutar `npm run build` y confirmar que compila sin errores ni warnings nuevos.
+- Ejecutar `npm run build` y `npx ng test --watch=false --browsers=ChromeHeadless` (tests ubicados en `src/app/tests/`) y confirmar que compila y pasan todos los specs sin errores.
 - No incluir archivos temporales ni credenciales; mantener commits concisos con prefijos convencionales (`feat:`, `fix:`, `docs:`, `refactor:`).

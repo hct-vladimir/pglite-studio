@@ -4,6 +4,16 @@ Todos los cambios notables de **pgLite Studio** se documentan en este archivo si
 
 ---
 
+## [0.5.0] — 2026-11-26
+
+### Changed
+- **Actualización completa del framework a Angular 22.3.0 y TypeScript 6.0.3** mediante migración escalonada oficial (`19.2 → 20.3 → 21.2 → 22.3`), manteniendo compatibilidad total con `JSZip` y `Tailwind CSS v3`.
+
+### Added
+- **Suite de pruebas unitarias (`src/app/tests/`)** cubriendo generadores PostgreSQL/C#/Angular TS, parser inverso SQL, importador `.dbm` de pgModeler, `ErStoreService` y `AppComponent` (13 specs en verde).
+
+---
+
 ## [0.4.0] — 2026-11-26
 
 ### Added

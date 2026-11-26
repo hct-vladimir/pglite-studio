@@ -2,7 +2,7 @@
 
 **pgLite Studio** es una herramienta visual ligera e interactiva de modelado Entidad-Relación (inspirada en *pgModeler*), diseñada para arquitectos y desarrolladores que trabajan con **PostgreSQL**, **.NET (C# / EF Core)** y **Angular (TypeScript)**.
 
-Construida 100% en **Angular 19** usando **Signals** para reactividad instantánea sin backend requerido.
+Construida 100% en **Angular 22** usando **Signals** para reactividad instantánea sin backend requerido.
 
 ---
 
@@ -28,7 +28,7 @@ Construida 100% en **Angular 19** usando **Signals** para reactividad instantán
 - **Exportación Full-Stack (`.ZIP` y `.pglite.json`)**:
   - Descarga en un clic un paquete `.zip` con `/sql`, `/csharp-entities`, `/angular-models` y el archivo de proyecto `.pglite.json` versionable en Git.
 
-Consulta el historial completo de versiones en [CHANGELOG.md](./CHANGELOG.md) o desde el botón de versión (`v0.4.0`) en la barra superior de la aplicación.
+Consulta el historial completo de versiones en [CHANGELOG.md](./CHANGELOG.md) o desde el botón de versión (`v0.5.0`) en la barra superior de la aplicación.
 
 > **Nota para colaboradores y agentes de IA:** Consulta [AGENTS.md](./AGENTS.md) para las convenciones del repo y el recordatorio de mantener sincronizados `CHANGELOG.md` y `src/app/data/changelog.data.ts` en cada cambio relevante.
 
@@ -51,6 +51,6 @@ npm run build
 
 ## 🛠️ Stack Tecnológico
 
-- **Framework**: Angular 19 (Standalone Components + Signals API)
+- **Framework**: Angular 22 (Standalone Components + Signals API + TypeScript 6)
 - **Estilos**: Tailwind CSS v3 + CSS Custom Variables (Tema Oscuro / Claro)
 - **Empaquetado ZIP**: JSZip (Client-side bundle generation)

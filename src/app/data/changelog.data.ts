@@ -9,13 +9,29 @@ export interface ChangelogEntry {
   }[];
 }
 
-export const APP_VERSION = 'v0.4.0';
+export const APP_VERSION = 'v0.5.0';
 
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
-    version: 'v0.4.0',
+    version: 'v0.5.0',
     date: '2026-11-26',
     tag: 'latest',
+    title: 'Upgrade a Angular 22.3 + TypeScript 6 y suite de tests unitarios',
+    highlights: [
+      {
+        type: 'changed',
+        text: 'Framework actualizado de forma escalonada a Angular 22.3.0 y TypeScript 6.0.3 conservando compatibilidad total.',
+      },
+      {
+        type: 'added',
+        text: 'Suite de pruebas unitarias en src/app/tests/ para generadores SQL/C#/TS, importador .dbm, store reactivo y UI principal.',
+      },
+    ],
+  },
+  {
+    version: 'v0.4.0',
+    date: '2026-11-26',
+    tag: 'release',
     title: 'UX Pro: Auto-width de tablas y paneles redimensionables / colapsables',
     highlights: [
       {

@@ -1589,7 +1589,7 @@
   <!-- ====================================================================== -->
   @if (showChangelogModal()) {
     <div
-      (click)="showChangelogModal.set(false)"
+      (click)="closeChangelogModal()"
       class="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-50"
     >
       <div
@@ -1611,7 +1611,7 @@
             </div>
           </div>
           <button
-            (click)="showChangelogModal.set(false)"
+            (click)="closeChangelogModal()"
             class="text-slate-400 hover:text-white text-sm px-1"
           >
             ✕
@@ -1670,10 +1670,10 @@
         >
           <span>Documentación completa en <code class="font-mono text-slate-300">CHANGELOG.md</code></span>
           <button
-            (click)="showChangelogModal.set(false)"
+            (click)="closeChangelogModal()"
             class="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-semibold"
           >
-            Cerrar
+            Entendido
           </button>
         </div>
       </div>

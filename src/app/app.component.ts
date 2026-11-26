@@ -84,8 +84,27 @@ export class AppComponent {
   // Modals state
   readonly showFkModal = signal<boolean>(false);
   readonly showImportSqlModal = signal<boolean>(false);
-  readonly showChangelogModal = signal<boolean>(false);
+  readonly showChangelogModal = signal<boolean>(this.shouldAutoOpenChangelog());
   readonly toastMessage = signal<string | null>(null);
+
+  private static readonly SEEN_VERSION_KEY = 'pglite_studio_seen_version';
+
+  private shouldAutoOpenChangelog(): boolean {
+    try {
+      return localStorage.getItem(AppComponent.SEEN_VERSION_KEY) !== APP_VERSION;
+    } catch {
+      return false;
+    }
+  }
+
+  closeChangelogModal(): void {
+    this.showChangelogModal.set(false);
+    try {
+      localStorage.setItem(AppComponent.SEEN_VERSION_KEY, APP_VERSION);
+    } catch {
+      // Ignore storage errors
+    }
+  }
 
   // FK Modal Form
   fkChildTableId = '';

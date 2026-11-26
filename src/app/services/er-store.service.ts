@@ -1,9 +1,12 @@
 import { Injectable, computed, effect, signal } from '@angular/core';
 import {
+  ErCheckConstraint,
   ErColumn,
+  ErIndex,
   ErInitialData,
   ErProject,
   ErTable,
+  ErUniqueConstraint,
   GeneratedFile,
   ReferentialAction,
   TABLE_COLORS,
@@ -574,6 +577,154 @@ export class ErStoreService {
           ...t,
           initialData: rows.length > 0 ? { ...t.initialData, rows } : undefined,
         };
+      }),
+    }));
+  }
+
+  // ---- Advanced Constraints: CHECK, Composite UNIQUE, and Explicit INDEXES ----
+
+  addCheckConstraint(tableId: string): void {
+    this.pushHistory();
+    this.project.update(p => ({
+      ...p,
+      tables: p.tables.map(t => {
+        if (t.id !== tableId) return t;
+        const list = t.checks ?? [];
+        const firstCol = t.columns.find(c => !c.pk)?.name || t.columns[0]?.name || 'valor';
+        const next: ErCheckConstraint = {
+          id: `ck_${Date.now()}`,
+          name: `ck_${t.name}_${list.length + 1}`,
+          expression: `${firstCol} IS NOT NULL`,
+        };
+        return { ...t, checks: [...list, next] };
+      }),
+    }));
+  }
+
+  updateCheckConstraint(
+    tableId: string,
+    checkId: string,
+    patch: Partial<Pick<ErCheckConstraint, 'name' | 'expression'>>
+  ): void {
+    this.project.update(p => ({
+      ...p,
+      tables: p.tables.map(t => {
+        if (t.id !== tableId || !t.checks) return t;
+        return {
+          ...t,
+          checks: t.checks.map(c => (c.id === checkId ? { ...c, ...patch } : c)),
+        };
+      }),
+    }));
+  }
+
+  deleteCheckConstraint(tableId: string, checkId: string): void {
+    this.pushHistory();
+    this.project.update(p => ({
+      ...p,
+      tables: p.tables.map(t => {
+        if (t.id !== tableId || !t.checks) return t;
+        const next = t.checks.filter(c => c.id !== checkId);
+        return { ...t, checks: next.length > 0 ? next : undefined };
+      }),
+    }));
+  }
+
+  addUniqueConstraint(tableId: string): void {
+    this.pushHistory();
+    this.project.update(p => ({
+      ...p,
+      tables: p.tables.map(t => {
+        if (t.id !== tableId) return t;
+        const list = t.uniqueConstraints ?? [];
+        const defaultCols = t.columns.filter(c => !c.pk).slice(0, 2).map(c => c.name);
+        const cols = defaultCols.length > 0 ? defaultCols : [t.columns[0]?.name || 'id'];
+        const next: ErUniqueConstraint = {
+          id: `uq_${Date.now()}`,
+          name: `uq_${t.name}_${cols.join('_')}`,
+          columns: cols,
+        };
+        return { ...t, uniqueConstraints: [...list, next] };
+      }),
+    }));
+  }
+
+  updateUniqueConstraint(
+    tableId: string,
+    uqId: string,
+    patch: Partial<Pick<ErUniqueConstraint, 'name' | 'columns'>>
+  ): void {
+    this.project.update(p => ({
+      ...p,
+      tables: p.tables.map(t => {
+        if (t.id !== tableId || !t.uniqueConstraints) return t;
+        return {
+          ...t,
+          uniqueConstraints: t.uniqueConstraints.map(u =>
+            u.id === uqId ? { ...u, ...patch } : u
+          ),
+        };
+      }),
+    }));
+  }
+
+  deleteUniqueConstraint(tableId: string, uqId: string): void {
+    this.pushHistory();
+    this.project.update(p => ({
+      ...p,
+      tables: p.tables.map(t => {
+        if (t.id !== tableId || !t.uniqueConstraints) return t;
+        const next = t.uniqueConstraints.filter(u => u.id !== uqId);
+        return { ...t, uniqueConstraints: next.length > 0 ? next : undefined };
+      }),
+    }));
+  }
+
+  addTableIndex(tableId: string): void {
+    this.pushHistory();
+    this.project.update(p => ({
+      ...p,
+      tables: p.tables.map(t => {
+        if (t.id !== tableId) return t;
+        const list = t.indexes ?? [];
+        const defaultCol = t.columns.find(c => !c.pk)?.name || t.columns[0]?.name || 'id';
+        const next: ErIndex = {
+          id: `idx_${Date.now()}`,
+          name: `idx_${t.name}_${defaultCol}`,
+          columns: [defaultCol],
+          unique: false,
+          method: 'btree',
+        };
+        return { ...t, indexes: [...list, next] };
+      }),
+    }));
+  }
+
+  updateTableIndex(
+    tableId: string,
+    idxId: string,
+    patch: Partial<Omit<ErIndex, 'id'>>
+  ): void {
+    this.project.update(p => ({
+      ...p,
+      tables: p.tables.map(t => {
+        if (t.id !== tableId || !t.indexes) return t;
+        return {
+          ...t,
+          indexes: t.indexes.map(i => (i.id === idxId ? { ...i, ...patch } : i)),
+        };
+      }),
+    }));
+  }
+
+  deleteTableIndex(tableId: string, idxId: string): void {
+    this.pushHistory();
+    this.project.update(p => ({
+      ...p,
+      tables: p.tables.map(t => {
+        if (t.id !== tableId || !t.indexes) return t;
+        const next = t.indexes.filter(i => i.id !== idxId);
+        return { ...t, indexes: next.length > 0 ? next : undefined };
       }),
     }));
   }

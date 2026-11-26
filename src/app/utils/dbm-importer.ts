@@ -1,8 +1,12 @@
 import {
+  ErCheckConstraint,
   ErColumn,
+  ErIndex,
+  ErIndexMethod,
   ErInitialData,
   ErProject,
   ErTable,
+  ErUniqueConstraint,
   ReferentialAction,
   TABLE_COLORS,
 } from '../models/er.models';
@@ -233,32 +237,79 @@ export function parsePgModelerDbm(xmlContent: string): DbmImportResult {
       };
     });
 
-    // Inline table constraints (PK, UQ, and occasional inline FK)
-    for (const constrEl of directChildren(tblEl, 'constraint')) {
+    // Inline table constraints (PK, UQ, CK) and indexes
+    const uniqueConstraints: ErUniqueConstraint[] = [];
+    const checks: ErCheckConstraint[] = [];
+    const indexes: ErIndex[] = [];
+
+    const tableConstraints = directChildren(tblEl, 'constraint');
+    tableConstraints.forEach((constrEl, cIdx) => {
+      const constrName = (constrEl.getAttribute('name') || '').trim();
       const constrType = (constrEl.getAttribute('type') || '').toLowerCase();
       const srcColsEl = directChildren(constrEl, 'columns').find(
         c => (c.getAttribute('ref-type') || 'src-columns') === 'src-columns'
       );
       const colNames = (srcColsEl?.getAttribute('names') || '')
         .split(',')
-        .map(s => s.replace(/"/g, '').trim().toLowerCase())
+        .map(s => s.replace(/"/g, '').trim())
         .filter(Boolean);
+      const lowerColNames = colNames.map(c => c.toLowerCase());
 
       if (constrType === 'pk-constr') {
         for (const col of columns) {
-          if (colNames.includes(col.name.toLowerCase())) {
+          if (lowerColNames.includes(col.name.toLowerCase())) {
             col.pk = true;
             col.nn = true;
           }
         }
       } else if (constrType === 'uq-constr') {
-        for (const col of columns) {
-          if (colNames.includes(col.name.toLowerCase())) {
-            col.unique = true;
-          }
+        if (colNames.length === 1) {
+          const singleCol = columns.find(c => c.name.toLowerCase() === lowerColNames[0]);
+          if (singleCol) singleCol.unique = true;
+        }
+        if (colNames.length > 1 || (colNames.length === 1 && constrName)) {
+          uniqueConstraints.push({
+            id: `dbm_uq_${tblIdx}_${cIdx}_${now}`,
+            name: constrName || `uq_${name}_${colNames.join('_')}`,
+            columns: colNames,
+          });
+        }
+      } else if (constrType === 'ck-constr') {
+        const expr = directChild(constrEl, 'expression')?.textContent?.trim();
+        if (expr) {
+          checks.push({
+            id: `dbm_ck_${tblIdx}_${cIdx}_${now}`,
+            name: constrName || `ck_${name}_${cIdx + 1}`,
+            expression: expr,
+          });
         }
       }
-    }
+    });
+
+    const validMethods = new Set<ErIndexMethod>(['btree', 'hash', 'gin', 'gist', 'brin']);
+    directChildren(tblEl, 'index').forEach((idxEl, iIdx) => {
+      const idxName = (idxEl.getAttribute('name') || `idx_${name}_${iIdx + 1}`).trim();
+      const isUnique = idxEl.getAttribute('unique') === 'true';
+      const rawMethod = (idxEl.getAttribute('indexing-type') || 'btree').toLowerCase();
+      const method: ErIndexMethod = validMethods.has(rawMethod as ErIndexMethod)
+        ? (rawMethod as ErIndexMethod)
+        : 'btree';
+      const predicate = directChild(idxEl, 'predicate')?.textContent?.trim() || undefined;
+      const idxCols = directChildren(idxEl, 'idxelement')
+        .map(el => directChild(el, 'column')?.getAttribute('name')?.trim() || '')
+        .filter(Boolean);
+
+      if (idxCols.length > 0) {
+        indexes.push({
+          id: `dbm_idx_${tblIdx}_${iIdx}_${now}`,
+          name: idxName,
+          columns: idxCols,
+          unique: isUnique,
+          method,
+          where: predicate,
+        });
+      }
+    });
 
     const initialDataEl = directChild(tblEl, 'initial-data');
     const initialData = parsePgModelerInitialData(initialDataEl?.textContent);
@@ -272,6 +323,9 @@ export function parsePgModelerDbm(xmlContent: string): DbmImportResult {
       x: 60,
       y: 60,
       columns,
+      uniqueConstraints: uniqueConstraints.length > 0 ? uniqueConstraints : undefined,
+      checks: checks.length > 0 ? checks : undefined,
+      indexes: indexes.length > 0 ? indexes : undefined,
       initialData,
     };
 
@@ -337,6 +391,7 @@ export function parsePgModelerDbm(xmlContent: string): DbmImportResult {
       .map(s => s.replace(/"/g, '').trim())
       .filter(Boolean);
 
+    const fkName = fkEl.getAttribute('name')?.trim() || undefined;
     const onDelete = normalizeReferentialAction(fkEl.getAttribute('del-action'));
     const onUpdate = normalizeReferentialAction(fkEl.getAttribute('upd-action'));
 
@@ -352,6 +407,7 @@ export function parsePgModelerDbm(xmlContent: string): DbmImportResult {
 
       if (srcCol && dstCol) {
         srcCol.fk = {
+          name: fkName,
           targetTableId: dstTable.id,
           targetColId: dstCol.id,
           onDelete,

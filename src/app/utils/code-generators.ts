@@ -1,4 +1,14 @@
-import { ErColumn, ErProject, ErTable, GeneratedFile, TABLE_COLORS } from '../models/er.models';
+import {
+  ErCheckConstraint,
+  ErColumn,
+  ErIndex,
+  ErIndexMethod,
+  ErProject,
+  ErTable,
+  ErUniqueConstraint,
+  GeneratedFile,
+  TABLE_COLORS,
+} from '../models/er.models';
 
 export function toPascalCase(str: string): string {
   return (str || '')
@@ -73,11 +83,18 @@ export function generatePostgreSqlDdl(project: ErProject): string {
 
     const colDefs: string[] = [];
     const pkCols: string[] = [];
+    const namedSingleUniqueCols = new Set(
+      (table.uniqueConstraints ?? [])
+        .filter(u => u.columns.length === 1)
+        .map(u => u.columns[0].toLowerCase())
+    );
 
     for (const col of table.columns) {
       let def = `    ${col.name} ${col.type.toUpperCase()}`;
       if (col.nn || col.pk) def += ` NOT NULL`;
-      if (col.unique && !col.pk) def += ` UNIQUE`;
+      if (col.unique && !col.pk && !namedSingleUniqueCols.has(col.name.toLowerCase())) {
+        def += ` UNIQUE`;
+      }
       if (col.defaultValue && col.defaultValue.trim().length > 0) {
         def += ` DEFAULT ${col.defaultValue.trim()}`;
       }
@@ -87,6 +104,22 @@ export function generatePostgreSqlDdl(project: ErProject): string {
 
     if (pkCols.length > 0) {
       colDefs.push(`    CONSTRAINT pk_${table.name} PRIMARY KEY (${pkCols.join(', ')})`);
+    }
+
+    for (const uq of table.uniqueConstraints ?? []) {
+      const cols = uq.columns.map(c => c.trim()).filter(Boolean);
+      if (cols.length > 0) {
+        const uqName = (uq.name || `uq_${table.name}_${cols.join('_')}`).trim();
+        colDefs.push(`    CONSTRAINT ${uqName} UNIQUE (${cols.join(', ')})`);
+      }
+    }
+
+    for (const ck of table.checks ?? []) {
+      const expr = (ck.expression || '').trim();
+      if (expr) {
+        const ckName = (ck.name || `ck_${table.name}`).trim();
+        colDefs.push(`    CONSTRAINT ${ckName} CHECK (${expr})`);
+      }
     }
 
     lines.push(colDefs.join(',\n'));
@@ -124,7 +157,7 @@ export function generatePostgreSqlDdl(project: ErProject): string {
         targetTable.columns[0];
       if (!targetCol) continue;
 
-      const constraintName = `fk_${table.name}_${col.name}`;
+      const constraintName = col.fk.name?.trim() || `fk_${table.name}_${col.name}`;
       fkStatements.push(
         `ALTER TABLE ${table.schema}.${table.name}\n` +
           `    ADD CONSTRAINT ${constraintName}\n` +
@@ -142,6 +175,22 @@ export function generatePostgreSqlDdl(project: ErProject): string {
     }
   }
 
+  // Explicit Table Indexes
+  const customIdxStatements: string[] = [];
+  for (const table of project.tables) {
+    for (const idx of table.indexes ?? []) {
+      const cols = idx.columns.map(c => c.trim()).filter(Boolean);
+      if (cols.length === 0) continue;
+      const uniqueKw = idx.unique ? 'UNIQUE ' : '';
+      const methodClause = idx.method && idx.method !== 'btree' ? ` USING ${idx.method}` : '';
+      const whereClause = idx.where && idx.where.trim() ? ` WHERE ${idx.where.trim()}` : '';
+      const idxName = (idx.name || `idx_${table.name}_${cols.join('_')}`).trim();
+      customIdxStatements.push(
+        `CREATE ${uniqueKw}INDEX IF NOT EXISTS ${idxName} ON ${table.schema}.${table.name}${methodClause} (${cols.join(', ')})${whereClause};`
+      );
+    }
+  }
+
   if (fkStatements.length > 0) {
     lines.push(`-- Foreign Key Constraints`);
     lines.push(fkStatements.join('\n\n'));
@@ -151,6 +200,12 @@ export function generatePostgreSqlDdl(project: ErProject): string {
   if (idxStatements.length > 0) {
     lines.push(`-- Performance Indexes for Foreign Keys`);
     lines.push(idxStatements.join('\n'));
+    lines.push(``);
+  }
+
+  if (customIdxStatements.length > 0) {
+    lines.push(`-- Custom Table Indexes`);
+    lines.push(customIdxStatements.join('\n'));
     lines.push(``);
   }
 
@@ -532,6 +587,8 @@ export function parsePostgreSqlToTables(sql: string): ErTable[] {
 
     const columns: ErColumn[] = [];
     const tableLevelPks = new Set<string>();
+    const uniqueConstraints: ErUniqueConstraint[] = [];
+    const checks: ErCheckConstraint[] = [];
 
     for (const rawLine of lines) {
       const line = rawLine.trim();
@@ -560,6 +617,38 @@ export function parsePostgreSqlToTables(sql: string): ErTable[] {
           sourceColName: fkConstraint[1].replace(/"/g, '').trim(),
           targetTableName: fkConstraint[2].replace(/"/g, '').trim(),
           targetColName: fkConstraint[3].replace(/"/g, '').trim(),
+        });
+        continue;
+      }
+
+      // Table-level UNIQUE constraint
+      const uqConstraint = line.match(
+        /^(?:CONSTRAINT\s+"?([a-zA-Z0-9_]+)"?\s+)?UNIQUE\s*\(([^)]+)\)/i
+      );
+      if (uqConstraint) {
+        const uqCols = uqConstraint[2]
+          .split(',')
+          .map(s => s.replace(/"/g, '').trim())
+          .filter(Boolean);
+        if (uqCols.length > 0) {
+          uniqueConstraints.push({
+            id: `sql_uq_${index}_${uniqueConstraints.length}_${Date.now()}`,
+            name: uqConstraint[1] || `uq_${tableName}_${uqCols.join('_')}`,
+            columns: uqCols,
+          });
+        }
+        continue;
+      }
+
+      // Table-level CHECK constraint
+      const ckConstraint = line.match(
+        /^(?:CONSTRAINT\s+"?([a-zA-Z0-9_]+)"?\s+)?CHECK\s*\(([\s\S]+)\)\s*$/i
+      );
+      if (ckConstraint) {
+        checks.push({
+          id: `sql_ck_${index}_${checks.length}_${Date.now()}`,
+          name: ckConstraint[1] || `ck_${tableName}_${checks.length + 1}`,
+          expression: ckConstraint[2].trim(),
         });
         continue;
       }
@@ -621,9 +710,43 @@ export function parsePostgreSqlToTables(sql: string): ErTable[] {
       x: 60 + colNum * 330,
       y: 60 + rowNum * 270,
       columns,
+      uniqueConstraints: uniqueConstraints.length > 0 ? uniqueConstraints : undefined,
+      checks: checks.length > 0 ? checks : undefined,
     });
 
     index++;
+  }
+
+  // Parse CREATE [UNIQUE] INDEX statements
+  const idxRegex =
+    /CREATE\s+(UNIQUE\s+)?INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?"?([a-zA-Z0-9_]+)"?\s+ON\s+(?:[a-zA-Z0-9_"]+\.)?"?([a-zA-Z0-9_]+)"?(?:\s+USING\s+([a-zA-Z]+))?\s*\(([^)]+)\)(?:\s+WHERE\s+([^;]+))?;/gi;
+  const validMethods = new Set<ErIndexMethod>(['btree', 'hash', 'gin', 'gist', 'brin']);
+
+  while ((match = idxRegex.exec(cleaned)) !== null) {
+    const isUnique = Boolean(match[1]);
+    const idxName = match[2].trim();
+    const tblName = match[3].trim();
+    const rawMethod = (match[4] || 'btree').toLowerCase();
+    const idxCols = match[5]
+      .split(',')
+      .map(s => s.replace(/"/g, '').trim())
+      .filter(Boolean);
+    const whereClause = match[6]?.trim() || undefined;
+
+    const targetTable = tables.find(t => t.name.toLowerCase() === tblName.toLowerCase());
+    if (targetTable && idxCols.length > 0) {
+      const idxObj: ErIndex = {
+        id: `sql_idx_${(targetTable.indexes?.length || 0) + 1}_${Date.now()}`,
+        name: idxName,
+        columns: idxCols,
+        unique: isUnique,
+        method: validMethods.has(rawMethod as ErIndexMethod)
+          ? (rawMethod as ErIndexMethod)
+          : 'btree',
+        where: whereClause,
+      };
+      targetTable.indexes = [...(targetTable.indexes ?? []), idxObj];
+    }
   }
 
   // Parse standalone ALTER TABLE ... ADD CONSTRAINT ... FOREIGN KEY

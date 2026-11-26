@@ -19,6 +19,7 @@ export type PgDataType =
 export type ReferentialAction = 'RESTRICT' | 'CASCADE' | 'SET NULL' | 'NO ACTION';
 
 export interface ForeignKeyRef {
+  name?: string;
   targetTableId: string;
   targetColId: string;
   onDelete: ReferentialAction;
@@ -37,11 +38,27 @@ export interface ErColumn {
   fk: ForeignKeyRef | null;
 }
 
+export type ErIndexMethod = 'btree' | 'hash' | 'gin' | 'gist' | 'brin';
+
 export interface ErIndex {
   id: string;
   name: string;
   columns: string[];
   unique: boolean;
+  method?: ErIndexMethod;
+  where?: string;
+}
+
+export interface ErCheckConstraint {
+  id: string;
+  name: string;
+  expression: string;
+}
+
+export interface ErUniqueConstraint {
+  id: string;
+  name: string;
+  columns: string[];
 }
 
 export interface ErInitialData {
@@ -59,6 +76,8 @@ export interface ErTable {
   y: number;
   columns: ErColumn[];
   indexes?: ErIndex[];
+  checks?: ErCheckConstraint[];
+  uniqueConstraints?: ErUniqueConstraint[];
   initialData?: ErInitialData;
 }
 

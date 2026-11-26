@@ -13,6 +13,7 @@ import JSZip from 'jszip';
 import { ErStoreService } from './services/er-store.service';
 import {
   ErColumn,
+  ErIndexMethod,
   ErProject,
   ErTable,
   PG_DATA_TYPES,
@@ -54,6 +55,7 @@ export class AppComponent {
   readonly pgTypes = PG_DATA_TYPES;
   readonly tableColors = TABLE_COLORS;
   readonly refActions: ReferentialAction[] = ['RESTRICT', 'CASCADE', 'SET NULL', 'NO ACTION'];
+  readonly indexMethods: ErIndexMethod[] = ['btree', 'hash', 'gin', 'gist', 'brin'];
 
   // Canvas Viewport Pan & Zoom State
   readonly zoom = signal<number>(1);
@@ -440,6 +442,21 @@ CREATE TABLE core.empleados (
 
   countTableFks(table: ErTable): number {
     return table.columns.filter(c => c.fk !== null).length;
+  }
+
+  countTableAdvancedConstraints(table: ErTable): number {
+    return (
+      (table.checks?.length ?? 0) +
+      (table.uniqueConstraints?.length ?? 0) +
+      (table.indexes?.length ?? 0)
+    );
+  }
+
+  toggleConstraintColumn(currentCols: string[], colName: string): string[] {
+    if (currentCols.includes(colName)) {
+      return currentCols.length > 1 ? currentCols.filter(c => c !== colName) : currentCols;
+    }
+    return [...currentCols, colName];
   }
 
   // Reverse Engineering SQL Import

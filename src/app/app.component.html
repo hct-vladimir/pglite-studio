@@ -941,6 +941,225 @@
               }
             </div>
 
+            <!-- Advanced Constraints: CHECK, Composite UNIQUE & Explicit INDEXES -->
+            <div class="pt-2 space-y-3 border-t" style="border-color: var(--border-subtle)">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Constraints & Índices ({{ countTableAdvancedConstraints(table) }})
+                </span>
+                <div class="flex items-center gap-1">
+                  <button
+                    (click)="store.addCheckConstraint(table.id)"
+                    class="px-1.5 py-0.5 rounded border text-[11px] font-medium hover:bg-slate-700/40 text-amber-400"
+                    style="border-color: var(--border-strong)"
+                    title="Agregar restricción CHECK"
+                  >
+                    + CHECK
+                  </button>
+                  <button
+                    (click)="store.addUniqueConstraint(table.id)"
+                    class="px-1.5 py-0.5 rounded border text-[11px] font-medium hover:bg-slate-700/40 text-emerald-400"
+                    style="border-color: var(--border-strong)"
+                    title="Agregar restricción UNIQUE compuesta"
+                  >
+                    + UQ
+                  </button>
+                  <button
+                    (click)="store.addTableIndex(table.id)"
+                    class="px-1.5 py-0.5 rounded border text-[11px] font-medium hover:bg-slate-700/40 text-indigo-400"
+                    style="border-color: var(--border-strong)"
+                    title="Agregar índice explícito"
+                  >
+                    + IDX
+                  </button>
+                </div>
+              </div>
+
+              <!-- CHECK Constraints -->
+              @if (table.checks?.length) {
+                <div class="space-y-1.5">
+                  <div class="text-[10px] font-bold uppercase tracking-wider text-amber-400/90">
+                    CHECK Constraints
+                  </div>
+                  @for (ck of table.checks; track ck.id) {
+                    <div
+                      class="p-2 rounded-lg border space-y-1.5"
+                      style="background-color: var(--bg-surface); border-color: var(--border-strong)"
+                    >
+                      <div class="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          [ngModel]="ck.name"
+                          (ngModelChange)="store.updateCheckConstraint(table.id, ck.id, { name: $event })"
+                          placeholder="ck_nombre"
+                          class="flex-1 min-w-0 px-2 py-0.5 rounded border font-mono text-[11px] bg-transparent focus:outline-none focus:ring-1 focus:ring-amber-500"
+                          [class.text-slate-800]="!store.isDarkMode()"
+                          [class.text-slate-100]="store.isDarkMode()"
+                          style="border-color: var(--border-strong)"
+                        />
+                        <button
+                          (click)="store.deleteCheckConstraint(table.id, ck.id)"
+                          class="px-1 text-slate-400 hover:text-rose-400"
+                          title="Eliminar CHECK"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        [ngModel]="ck.expression"
+                        (ngModelChange)="store.updateCheckConstraint(table.id, ck.id, { expression: $event })"
+                        placeholder="Ej. precio >= 0 AND estado IN ('A', 'R')"
+                        class="w-full px-2 py-1 rounded border font-mono text-[11px] bg-transparent text-amber-300 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        style="border-color: var(--border-subtle)"
+                      />
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Composite UNIQUE Constraints -->
+              @if (table.uniqueConstraints?.length) {
+                <div class="space-y-1.5">
+                  <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-400/90">
+                    UNIQUE Constraints
+                  </div>
+                  @for (uq of table.uniqueConstraints; track uq.id) {
+                    <div
+                      class="p-2 rounded-lg border space-y-1.5"
+                      style="background-color: var(--bg-surface); border-color: var(--border-strong)"
+                    >
+                      <div class="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          [ngModel]="uq.name"
+                          (ngModelChange)="store.updateUniqueConstraint(table.id, uq.id, { name: $event })"
+                          placeholder="uq_tabla_cols"
+                          class="flex-1 min-w-0 px-2 py-0.5 rounded border font-mono text-[11px] bg-transparent focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          [class.text-slate-800]="!store.isDarkMode()"
+                          [class.text-slate-100]="store.isDarkMode()"
+                          style="border-color: var(--border-strong)"
+                        />
+                        <button
+                          (click)="store.deleteUniqueConstraint(table.id, uq.id)"
+                          class="px-1 text-slate-400 hover:text-rose-400"
+                          title="Eliminar UNIQUE"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div class="flex flex-wrap gap-1">
+                        @for (c of table.columns; track c.id) {
+                          <button
+                            type="button"
+                            (click)="store.updateUniqueConstraint(table.id, uq.id, { columns: toggleConstraintColumn(uq.columns, c.name) })"
+                            class="px-1.5 py-0.5 rounded font-mono text-[10px] border transition"
+                            [ngClass]="
+                              uq.columns.includes(c.name)
+                                ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-300 font-semibold'
+                                : 'border-slate-700 text-slate-400 hover:text-slate-200'
+                            "
+                          >
+                            {{ c.name }}
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Explicit Indexes -->
+              @if (table.indexes?.length) {
+                <div class="space-y-1.5">
+                  <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-400/90">
+                    Índices Explícitos
+                  </div>
+                  @for (idx of table.indexes; track idx.id) {
+                    <div
+                      class="p-2 rounded-lg border space-y-1.5"
+                      style="background-color: var(--bg-surface); border-color: var(--border-strong)"
+                    >
+                      <div class="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          [ngModel]="idx.name"
+                          (ngModelChange)="store.updateTableIndex(table.id, idx.id, { name: $event })"
+                          placeholder="idx_tabla_col"
+                          class="flex-1 min-w-0 px-2 py-0.5 rounded border font-mono text-[11px] bg-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          [class.text-slate-800]="!store.isDarkMode()"
+                          [class.text-slate-100]="store.isDarkMode()"
+                          style="border-color: var(--border-strong)"
+                        />
+                        <select
+                          [ngModel]="idx.method || 'btree'"
+                          (ngModelChange)="store.updateTableIndex(table.id, idx.id, { method: $event })"
+                          class="w-20 px-1 py-0.5 rounded border font-mono text-[11px] bg-slate-900 text-slate-100"
+                          style="border-color: var(--border-strong)"
+                        >
+                          @for (m of indexMethods; track m) {
+                            <option [value]="m">{{ m }}</option>
+                          }
+                        </select>
+                        <button
+                          (click)="store.deleteTableIndex(table.id, idx.id)"
+                          class="px-1 text-slate-400 hover:text-rose-400"
+                          title="Eliminar índice"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      <div class="flex flex-wrap gap-1">
+                        @for (c of table.columns; track c.id) {
+                          <button
+                            type="button"
+                            (click)="store.updateTableIndex(table.id, idx.id, { columns: toggleConstraintColumn(idx.columns, c.name) })"
+                            class="px-1.5 py-0.5 rounded font-mono text-[10px] border transition"
+                            [ngClass]="
+                              idx.columns.includes(c.name)
+                                ? 'bg-indigo-500/20 border-indigo-500/60 text-indigo-300 font-semibold'
+                                : 'border-slate-700 text-slate-400 hover:text-slate-200'
+                            "
+                          >
+                            {{ c.name }}
+                          </button>
+                        }
+                      </div>
+
+                      <div class="flex items-center gap-2 pt-0.5">
+                        <label class="flex items-center gap-1 cursor-pointer shrink-0">
+                          <input
+                            type="checkbox"
+                            [ngModel]="idx.unique"
+                            (ngModelChange)="store.updateTableIndex(table.id, idx.id, { unique: $event })"
+                            class="accent-indigo-500"
+                          />
+                          <span class="text-indigo-300 text-[11px] font-medium">UNIQUE</span>
+                        </label>
+                        <input
+                          type="text"
+                          [ngModel]="idx.where || ''"
+                          (ngModelChange)="store.updateTableIndex(table.id, idx.id, { where: $event })"
+                          placeholder="WHERE parcial (ej. activo = true)"
+                          class="flex-1 min-w-0 px-2 py-0.5 rounded border font-mono text-[11px] bg-transparent focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          [class.text-slate-700]="!store.isDarkMode()"
+                          [class.text-slate-300]="store.isDarkMode()"
+                          style="border-color: var(--border-subtle)"
+                        />
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+
+              @if (countTableAdvancedConstraints(table) === 0) {
+                <p class="text-[11px] text-slate-500">
+                  Agrega validaciones <code class="font-mono">CHECK</code>, llaves <code class="font-mono">UNIQUE</code> compuestas o índices (<code class="font-mono">btree</code>, <code class="font-mono">gin</code>, parciales con <code class="font-mono">WHERE</code>).
+                </p>
+              }
+            </div>
+
             <!-- Initial Seed Data (pgModeler <initial-data>) -->
             <div class="pt-2 space-y-2 border-t" style="border-color: var(--border-subtle)">
               <div class="flex items-center justify-between">

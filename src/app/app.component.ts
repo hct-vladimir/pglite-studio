@@ -21,6 +21,7 @@ import {
   TABLE_COLORS,
 } from './models/er.models';
 import { singularize, toKebabCase } from './utils/code-generators';
+import { APP_VERSION, CHANGELOG_ENTRIES } from './data/changelog.data';
 
 interface SvgRelationshipPath {
   id: string;
@@ -52,6 +53,8 @@ export class AppComponent {
   canvasViewport?: ElementRef<HTMLDivElement>;
 
   // Constants exposed to template
+  readonly appVersion = APP_VERSION;
+  readonly changelog = CHANGELOG_ENTRIES;
   readonly pgTypes = PG_DATA_TYPES;
   readonly tableColors = TABLE_COLORS;
   readonly refActions: ReferentialAction[] = ['RESTRICT', 'CASCADE', 'SET NULL', 'NO ACTION'];
@@ -81,6 +84,7 @@ export class AppComponent {
   // Modals state
   readonly showFkModal = signal<boolean>(false);
   readonly showImportSqlModal = signal<boolean>(false);
+  readonly showChangelogModal = signal<boolean>(false);
   readonly toastMessage = signal<string | null>(null);
 
   // FK Modal Form

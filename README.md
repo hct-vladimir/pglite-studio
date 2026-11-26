@@ -20,10 +20,15 @@ Construida 100% en **Angular 19** usando **Signals** para reactividad instantán
   1. **PostgreSQL 16+ DDL (`schema.sql`)**: `CREATE SCHEMA`, `CREATE TABLE`, `COMMENT ON`, `ALTER TABLE ... ADD CONSTRAINT FOREIGN KEY` e índices automáticos `CREATE INDEX` sobre llaves foráneas.
   2. **C# Entities (`.NET 8 / EF Core`)**: Clases o `records` con `DataAnnotations` (`[Table]`, `[Key]`, `[Required]`, `[MaxLength]`, `[Column]`, `[ForeignKey]`) y propiedades de navegación `1:N` (`ICollection<T>`).
   3. **Angular TypeScript Models + DTOs**: Interfaces en `camelCase` con relaciones opcionales y tipos utilitarios `Create<Entity>Dto` y `Update<Entity>Dto`.
-- **Ingeniería Inversa (`📥 Importar SQL`)**:
-  - Pega cualquier script `CREATE TABLE` / `ALTER TABLE` de PostgreSQL existente para dibujar el diagrama ER automáticamente.
+- **Constraints Avanzados e Índices**:
+  - Restricciones `CHECK`, llaves `UNIQUE` compuestas/nombradas e índices explícitos (`btree`, `hash`, `gin`, `gist`, `brin`) con predicado parcial `WHERE`.
+- **Importación Nativa de pgModeler (`.dbm`) e Ingeniería Inversa SQL (`📥 Importar SQL`)**:
+  - Importa directamente archivos `.dbm` de *pgModeler* preservando esquemas, tablas, tipos, defaults, comentarios, colores de tag, `<prepended-sql>` (extensiones), `<initial-data>` (datos semilla) y restricciones `PK`/`UQ`/`CK`/`FK`/`INDEX`.
+  - También puedes pegar cualquier script `CREATE TABLE` / `ALTER TABLE` / `CREATE INDEX` de PostgreSQL para construir el diagrama automáticamente.
 - **Exportación Full-Stack (`.ZIP` y `.pglite.json`)**:
   - Descarga en un clic un paquete `.zip` con `/sql`, `/csharp-entities`, `/angular-models` y el archivo de proyecto `.pglite.json` versionable en Git.
+
+Consulta el historial completo de versiones en [CHANGELOG.md](./CHANGELOG.md) o desde el botón de versión (`v0.3.0`) en la barra superior de la aplicación.
 
 ---
 

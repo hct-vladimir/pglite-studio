@@ -30,6 +30,13 @@
               class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30 font-semibold"
               >PRO ER</span
             >
+            <button
+              (click)="showChangelogModal.set(true)"
+              class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 font-semibold transition cursor-pointer"
+              title="Ver historial de versiones y novedades"
+            >
+              {{ appVersion }}
+            </button>
           </div>
           <p class="text-[11px] text-slate-400 leading-none">
             PostgreSQL · .NET 8 EF Core · Angular Signals
@@ -1572,6 +1579,102 @@
               ⚡ Parsear SQL y Dibujar Diagrama
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ====================================================================== -->
+  <!-- MODAL 3: CHANGELOG / WHAT'S NEW                                        -->
+  <!-- ====================================================================== -->
+  @if (showChangelogModal()) {
+    <div
+      (click)="showChangelogModal.set(false)"
+      class="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+    >
+      <div
+        (click)="$event.stopPropagation()"
+        class="w-[560px] max-h-[80vh] rounded-xl border flex flex-col text-xs shadow-2xl overflow-hidden"
+        style="background-color: var(--bg-panel); border-color: var(--border-strong)"
+      >
+        <div
+          class="px-4 py-3 border-b flex items-center justify-between"
+          style="background-color: var(--bg-surface); border-color: var(--border-subtle)"
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-base">🚀</span>
+            <div>
+              <h2 class="font-bold text-sm text-white">Novedades de pgLite Studio</h2>
+              <p class="text-[11px] text-slate-400">
+                Historial de versiones y mejoras del modelador ER
+              </p>
+            </div>
+          </div>
+          <button
+            (click)="showChangelogModal.set(false)"
+            class="text-slate-400 hover:text-white text-sm px-1"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-4">
+          @for (entry of changelog; track entry.version) {
+            <div
+              class="p-3.5 rounded-lg border space-y-2"
+              style="background-color: var(--bg-surface); border-color: var(--border-strong)"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="font-mono font-bold text-xs px-2 py-0.5 rounded"
+                    [ngClass]="
+                      entry.tag === 'latest'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : 'bg-slate-800 text-slate-300 border border-slate-700'
+                    "
+                  >
+                    {{ entry.version }}
+                  </span>
+                  <span class="font-semibold text-white">{{ entry.title }}</span>
+                </div>
+                <span class="font-mono text-[11px] text-slate-400 shrink-0">{{ entry.date }}</span>
+              </div>
+
+              <ul class="space-y-1.5 pt-1">
+                @for (item of entry.highlights; track item.text) {
+                  <li class="flex items-start gap-2 text-[11.5px] text-slate-300 leading-relaxed">
+                    <span
+                      class="mt-0.5 px-1.5 py-0.2 rounded font-mono text-[9.5px] uppercase font-bold shrink-0"
+                      [ngClass]="
+                        item.type === 'added'
+                          ? 'bg-blue-500/20 text-blue-300'
+                          : item.type === 'changed'
+                          ? 'bg-amber-500/20 text-amber-300'
+                          : 'bg-rose-500/20 text-rose-300'
+                      "
+                    >
+                      {{ item.type === 'added' ? 'Nuevo' : item.type === 'changed' ? 'Mejora' : 'Fix' }}
+                    </span>
+                    <span>{{ item.text }}</span>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        </div>
+
+        <div
+          class="px-4 py-2.5 border-t flex items-center justify-between text-[11px] text-slate-400"
+          style="border-color: var(--border-subtle)"
+        >
+          <span>Documentación completa en <code class="font-mono text-slate-300">CHANGELOG.md</code></span>
+          <button
+            (click)="showChangelogModal.set(false)"
+            class="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-semibold"
+          >
+            Cerrar
+          </button>
         </div>
       </div>
     </div>

@@ -48,6 +48,13 @@ export function generatePostgreSqlDdl(project: ErProject): string {
     ``,
   ];
 
+  // Prepended SQL (extensions, custom setup)
+  if (project.prependedSql && project.prependedSql.trim()) {
+    lines.push(`-- Prepended SQL / Extensions`);
+    lines.push(project.prependedSql.trim());
+    lines.push(``);
+  }
+
   // Ensure custom schemas exist
   schemas
     .filter(s => s !== 'public')
@@ -147,8 +154,77 @@ export function generatePostgreSqlDdl(project: ErProject): string {
     lines.push(``);
   }
 
+  // Initial Seed Data (ordered topologically: parent tables before child tables)
+  const seedTables = sortTablesTopologically(
+    project.tables.filter(t => t.initialData && t.initialData.rows.length > 0)
+  );
+
+  if (seedTables.length > 0) {
+    lines.push(`-- Initial Seed Data`);
+    for (const table of seedTables) {
+      const seed = table.initialData!;
+      const colsList = seed.columns.join(', ');
+      lines.push(`-- Seed: ${table.schema}.${table.name} (${seed.rows.length} rows)`);
+      for (const row of seed.rows) {
+        const formattedValues = seed.columns.map((colName, idx) => {
+          const rawVal = row[idx] ?? '';
+          const colDef = table.columns.find(c => c.name.toLowerCase() === colName.toLowerCase());
+          return formatSqlSeedValue(rawVal, colDef?.type);
+        });
+        lines.push(
+          `INSERT INTO ${table.schema}.${table.name} (${colsList}) VALUES (${formattedValues.join(', ')}) ON CONFLICT DO NOTHING;`
+        );
+      }
+      lines.push(``);
+    }
+  }
+
   lines.push(`COMMIT;`);
   return lines.join('\n');
+}
+
+function sortTablesTopologically(tables: ErTable[]): ErTable[] {
+  const depthMap = new Map<string, number>();
+  tables.forEach(t => depthMap.set(t.id, 0));
+
+  for (let pass = 0; pass < tables.length; pass++) {
+    for (const t of tables) {
+      for (const col of t.columns) {
+        if (col.fk && col.fk.targetTableId !== t.id && depthMap.has(col.fk.targetTableId)) {
+          const parentDepth = depthMap.get(col.fk.targetTableId) ?? 0;
+          const currentDepth = depthMap.get(t.id) ?? 0;
+          if (parentDepth + 1 > currentDepth) {
+            depthMap.set(t.id, parentDepth + 1);
+          }
+        }
+      }
+    }
+  }
+
+  return [...tables].sort((a, b) => (depthMap.get(a.id) ?? 0) - (depthMap.get(b.id) ?? 0));
+}
+
+function formatSqlSeedValue(rawVal: string, pgType?: string): string {
+  const val = rawVal.trim();
+  if (!val || val.toUpperCase() === 'NULL' || val === '\\N') {
+    return 'NULL';
+  }
+  if (val.toUpperCase() === 'DEFAULT') {
+    return 'DEFAULT';
+  }
+  const t = (pgType || '').toLowerCase();
+  if (
+    (['serial', 'bigserial', 'integer', 'bigint', 'smallint'].includes(t) ||
+      t.startsWith('numeric') ||
+      t.startsWith('decimal')) &&
+    /^-?\d+(\.\d+)?$/.test(val)
+  ) {
+    return val;
+  }
+  if ((t === 'boolean' || t === 'bool') && /^(true|false)$/i.test(val)) {
+    return val.toLowerCase();
+  }
+  return `'${val.replace(/'/g, "''")}'`;
 }
 
 /**

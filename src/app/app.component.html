@@ -142,6 +142,17 @@
       >
         <span>📥</span> Importar SQL
       </button>
+
+      <label
+        class="px-2.5 py-1.5 rounded-md text-xs font-medium border hover:bg-slate-700/30 transition flex items-center gap-1.5 cursor-pointer"
+        [class.text-slate-700]="!store.isDarkMode()"
+        [class.text-slate-200]="store.isDarkMode()"
+        style="border-color: var(--border-strong)"
+        title="Importar archivo nativo de pgModeler (.dbm)"
+      >
+        <span>🗂️</span> Importar .DBM
+        <input type="file" accept=".dbm,.xml" (change)="onImportDbmFile($event)" class="hidden" />
+      </label>
     </div>
 
     <!-- Right Code Generation & Full-Stack Export Actions -->
@@ -219,10 +230,10 @@
         [class.text-slate-700]="!store.isDarkMode()"
         [class.text-slate-300]="store.isDarkMode()"
         style="border-color: var(--border-strong)"
-        title="Abrir archivo de proyecto (.pglite.json)"
+        title="Abrir archivo de proyecto (.pglite.json o pgModeler .dbm)"
       >
         📂
-        <input type="file" accept=".json" (change)="onImportProjectFile($event)" class="hidden" />
+        <input type="file" accept=".json,.dbm,.xml" (change)="onImportProjectFile($event)" class="hidden" />
       </label>
 
       <!-- Theme Toggle -->
@@ -820,7 +831,7 @@
                       class="w-32 px-1.5 py-1 rounded border font-mono text-xs bg-slate-900 text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       style="border-color: var(--border-strong)"
                     >
-                      @for (tp of pgTypes; track tp) {
+                      @for (tp of getColumnTypeOptions(col.type); track tp) {
                         <option [value]="tp">{{ tp }}</option>
                       }
                     </select>
@@ -898,7 +909,19 @@
                     />
                   </div>
 
-                  <!-- Row 3: Foreign Key Info Badge if present -->
+                  <!-- Row 3: Column Comment -->
+                  <input
+                    type="text"
+                    [ngModel]="col.comment"
+                    (ngModelChange)="store.updateColumn(table.id, col.id, { comment: $event })"
+                    placeholder="Comentario de columna (COMMENT ON / XML Doc)..."
+                    class="w-full px-2 py-0.5 rounded border text-[11px] bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    [class.text-slate-700]="!store.isDarkMode()"
+                    [class.text-slate-300]="store.isDarkMode()"
+                    style="border-color: var(--border-subtle)"
+                  />
+
+                  <!-- Row 4: Foreign Key Info Badge if present -->
                   @if (col.fk; as fk) {
                     <div
                       class="px-2 py-1 rounded bg-sky-500/10 border border-sky-500/30 flex items-center justify-between text-[11px]"
@@ -915,6 +938,74 @@
                     </div>
                   }
                 </div>
+              }
+            </div>
+
+            <!-- Initial Seed Data (pgModeler <initial-data>) -->
+            <div class="pt-2 space-y-2 border-t" style="border-color: var(--border-subtle)">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Datos Semilla ({{ table.initialData?.rows?.length || 0 }})
+                </span>
+                <button
+                  (click)="store.addInitialDataRow(table.id)"
+                  class="px-2 py-0.5 rounded border text-[11px] font-medium hover:bg-slate-700/40 text-emerald-400"
+                  style="border-color: var(--border-strong)"
+                >
+                  + Fila Seed
+                </button>
+              </div>
+
+              @if (table.initialData; as seed) {
+                <div
+                  class="rounded-lg border overflow-x-auto"
+                  style="background-color: var(--bg-surface); border-color: var(--border-strong)"
+                >
+                  <table class="w-full text-[11px] font-mono border-collapse">
+                    <thead>
+                      <tr class="border-b text-slate-400" style="border-color: var(--border-subtle)">
+                        @for (colName of seed.columns; track colName) {
+                          <th class="px-1.5 py-1 text-left font-semibold whitespace-nowrap">
+                            {{ colName }}
+                          </th>
+                        }
+                        <th class="w-6"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (row of seed.rows; track $index; let rIdx = $index) {
+                        <tr class="border-b last:border-b-0" style="border-color: var(--border-subtle)">
+                          @for (colName of seed.columns; track colName; let cIdx = $index) {
+                            <td class="p-1">
+                              <input
+                                type="text"
+                                [ngModel]="row[cIdx] || ''"
+                                (ngModelChange)="store.updateInitialDataCell(table.id, rIdx, cIdx, $event)"
+                                class="w-28 px-1.5 py-0.5 rounded border bg-transparent text-[11px] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                [class.text-slate-800]="!store.isDarkMode()"
+                                [class.text-slate-200]="store.isDarkMode()"
+                                style="border-color: var(--border-strong)"
+                              />
+                            </td>
+                          }
+                          <td class="p-1 text-center">
+                            <button
+                              (click)="store.deleteInitialDataRow(table.id, rIdx)"
+                              class="text-slate-400 hover:text-rose-400"
+                              title="Eliminar fila"
+                            >
+                              ✕
+                            </button>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              } @else {
+                <p class="text-[11px] text-slate-500">
+                  Sin datos iniciales. Al agregar filas se generarán sentencias <code class="font-mono">INSERT INTO</code> en el SQL.
+                </p>
               }
             </div>
           </div>
@@ -966,6 +1057,26 @@
                 <span>🅰️</span> Angular TS
               </button>
             </div>
+
+            <!-- SQL Specific Options (Prepended SQL / Extensions) -->
+            @if (activeCodeLang() === 'sql') {
+              <div
+                class="p-2 rounded border space-y-1 text-[11px]"
+                style="background-color: var(--bg-panel); border-color: var(--border-strong)"
+              >
+                <label class="block text-slate-400 font-medium">
+                  SQL Inicial / Extensiones (prepended-sql):
+                </label>
+                <textarea
+                  rows="2"
+                  [ngModel]="store.project().prependedSql || ''"
+                  (ngModelChange)="store.updateProjectConfig({ prependedSql: $event })"
+                  placeholder='Ej. CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'
+                  class="w-full px-2 py-1 rounded border font-mono text-[11px] bg-transparent text-emerald-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  style="border-color: var(--border-strong)"
+                ></textarea>
+              </div>
+            }
 
             <!-- C# Specific Options (Namespace, EF Core DataAnnotations, record vs class) -->
             @if (activeCodeLang() === 'csharp') {

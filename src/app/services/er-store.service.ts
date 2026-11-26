@@ -1,6 +1,7 @@
 import { Injectable, computed, effect, signal } from '@angular/core';
 import {
   ErColumn,
+  ErInitialData,
   ErProject,
   ErTable,
   GeneratedFile,
@@ -15,6 +16,7 @@ import {
   parsePostgreSqlToTables,
   singularize,
 } from '../utils/code-generators';
+import { DbmImportResult, parsePgModelerDbm } from '../utils/dbm-importer';
 
 const STORAGE_KEY = 'pglite_studio_project_v1';
 
@@ -515,10 +517,64 @@ export class ErStoreService {
     }
   }
 
-  updateTableMeta(tableId: string, patch: Partial<Pick<ErTable, 'name' | 'schema' | 'color' | 'comment'>>): void {
+  updateTableMeta(
+    tableId: string,
+    patch: Partial<Pick<ErTable, 'name' | 'schema' | 'color' | 'comment' | 'initialData'>>
+  ): void {
     this.project.update(p => ({
       ...p,
       tables: p.tables.map(t => (t.id === tableId ? { ...t, ...patch } : t)),
+    }));
+  }
+
+  addInitialDataRow(tableId: string): void {
+    this.pushHistory();
+    this.project.update(p => ({
+      ...p,
+      tables: p.tables.map(t => {
+        if (t.id !== tableId) return t;
+        const cols = t.initialData?.columns?.length
+          ? t.initialData.columns
+          : t.columns.map(c => c.name);
+        const existingRows = t.initialData?.rows ?? [];
+        const emptyRow = cols.map(() => '');
+        const initialData: ErInitialData = {
+          columns: [...cols],
+          rows: [...existingRows, emptyRow],
+        };
+        return { ...t, initialData };
+      }),
+    }));
+  }
+
+  updateInitialDataCell(tableId: string, rowIndex: number, colIndex: number, value: string): void {
+    this.project.update(p => ({
+      ...p,
+      tables: p.tables.map(t => {
+        if (t.id !== tableId || !t.initialData) return t;
+        const rows = t.initialData.rows.map((row, rIdx) => {
+          if (rIdx !== rowIndex) return row;
+          const next = [...row];
+          next[colIndex] = value;
+          return next;
+        });
+        return { ...t, initialData: { ...t.initialData, rows } };
+      }),
+    }));
+  }
+
+  deleteInitialDataRow(tableId: string, rowIndex: number): void {
+    this.pushHistory();
+    this.project.update(p => ({
+      ...p,
+      tables: p.tables.map(t => {
+        if (t.id !== tableId || !t.initialData) return t;
+        const rows = t.initialData.rows.filter((_, idx) => idx !== rowIndex);
+        return {
+          ...t,
+          initialData: rows.length > 0 ? { ...t.initialData, rows } : undefined,
+        };
+      }),
     }));
   }
 
@@ -758,5 +814,16 @@ export class ErStoreService {
     this.selectedTableId.set(parsedTables[0].id);
     this.autoLayoutDiagram();
     return parsedTables.length;
+  }
+
+  /**
+   * Import a pgModeler .dbm XML file preserving tables, FKs, comments, defaults, and positions
+   */
+  importFromPgModelerDbm(xmlContent: string): DbmImportResult {
+    const result = parsePgModelerDbm(xmlContent);
+    this.pushHistory();
+    this.project.set(result.project);
+    this.selectedTableId.set(result.project.tables[0]?.id ?? null);
+    return result;
   }
 }

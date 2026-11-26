@@ -431,6 +431,13 @@ CREATE TABLE core.empleados (
     return this.store.tables().find(t => t.id === targetTableId)?.name ?? 'tabla';
   }
 
+  getColumnTypeOptions(currentType: string): string[] {
+    if (!currentType || this.pgTypes.includes(currentType)) {
+      return this.pgTypes;
+    }
+    return [currentType, ...this.pgTypes];
+  }
+
   countTableFks(table: ErTable): number {
     return table.columns.filter(c => c.fk !== null).length;
   }
@@ -487,27 +494,89 @@ CREATE TABLE core.empleados (
     this.showToast('Proyecto exportado en formato .pglite.json');
   }
 
-  // Import Project JSON
+  // Import Project JSON (.pglite.json) or pgModeler (.dbm)
   onImportProjectFile(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
 
+    const isDbm = file.name.toLowerCase().endsWith('.dbm');
     const reader = new FileReader();
     reader.onload = () => {
+      const text = String(reader.result || '');
+      if (isDbm || text.trimStart().startsWith('<?xml') || text.includes('<dbmodel')) {
+        this.handleDbmImport(text);
+        return;
+      }
+
       try {
-        const parsed = JSON.parse(String(reader.result)) as ErProject;
+        const parsed = JSON.parse(text) as ErProject;
         if (parsed && Array.isArray(parsed.tables)) {
           this.store.loadProjectJson(parsed);
           this.resetViewport();
           this.showToast(`Proyecto cargado: ${parsed.name}`);
         }
       } catch {
-        this.showToast('El archivo JSON no tiene un formato válido');
+        this.showToast('El archivo no tiene un formato .json o .dbm válido');
       }
     };
     reader.readAsText(file);
     input.value = '';
+  }
+
+  // Dedicated pgModeler .dbm file import
+  onImportDbmFile(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.handleDbmImport(String(reader.result || ''));
+    };
+    reader.readAsText(file);
+    input.value = '';
+  }
+
+  private handleDbmImport(xmlText: string): void {
+    try {
+      const res = this.store.importFromPgModelerDbm(xmlText);
+      this.fitDiagramToViewport();
+      this.showToast(
+        `pgModeler importado: ${res.project.name} (${res.tableCount} tablas · ${res.relationCount} FK)`
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error al leer el archivo .dbm';
+      this.showToast(msg);
+    }
+  }
+
+  fitDiagramToViewport(): void {
+    const tables = this.store.tables();
+    if (tables.length === 0) {
+      this.resetViewport();
+      return;
+    }
+
+    const vpWidth = this.canvasViewport?.nativeElement.clientWidth || 900;
+    const vpHeight = this.canvasViewport?.nativeElement.clientHeight || 650;
+
+    const minX = Math.min(...tables.map(t => t.x));
+    const minY = Math.min(...tables.map(t => t.y));
+    const maxX = Math.max(...tables.map(t => t.x + 280));
+    const maxY = Math.max(...tables.map(t => t.y + 70 + t.columns.length * 30));
+
+    const contentW = Math.max(300, maxX - minX);
+    const contentH = Math.max(200, maxY - minY);
+    const padding = 48;
+
+    const scaleX = (vpWidth - padding * 2) / contentW;
+    const scaleY = (vpHeight - padding * 2) / contentH;
+    const fitZoom = Math.max(0.45, Math.min(1, Number(Math.min(scaleX, scaleY).toFixed(2))));
+
+    this.zoom.set(fitZoom);
+    this.panX.set(Math.round(padding - minX * fitZoom));
+    this.panY.set(Math.round(padding - minY * fitZoom));
   }
 
   // Export Full Stack Bundle (.zip with /sql, /csharp-entities, /angular-models, and project.pglite.json)

@@ -44,6 +44,11 @@ export interface ErIndex {
   unique: boolean;
 }
 
+export interface ErInitialData {
+  columns: string[];
+  rows: string[][];
+}
+
 export interface ErTable {
   id: string;
   schema: string;
@@ -54,6 +59,7 @@ export interface ErTable {
   y: number;
   columns: ErColumn[];
   indexes?: ErIndex[];
+  initialData?: ErInitialData;
 }
 
 export interface ErProject {
@@ -63,6 +69,7 @@ export interface ErProject {
   csharpNamespace: string;
   useEfDataAnnotations: boolean;
   useCSharpRecords: boolean;
+  prependedSql?: string;
   tables: ErTable[];
 }
 
